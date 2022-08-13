@@ -33,12 +33,11 @@ uniform vec4 Random4;	//	a random number per frame (not per voxel!)
 const float FloorY = 0.0;
 #define NearFloorY	(FloorY+0.02)
 
-uniform float DropAll;
-#define DROP_ALL	(DropAll>0.5)
 
 #define mat_identity	mat4(1,0,0,0,	0,1,0,0,	0,0,1,0,	0,0,0,1 )
 
-
+//	could lose some energy and collide when velocity gets low
+#define COLLIDE_WITH_WORLD	false
 
 uniform sampler2D OccupancyMapTexture;
 uniform vec2 OccupancyMapTextureSize;
@@ -391,7 +390,7 @@ void main()
 
 	//	do collisions with world
 	vec3 NewVelocity = Velocity.xyz + (Force*Timestep);
-	if ( length(NewVelocity) > 0.0 )
+	if ( length(NewVelocity) > 0.0 && COLLIDE_WITH_WORLD )
 	{
 		//	get next occupancy position
 		vec3 HitNormal;
@@ -429,13 +428,6 @@ void main()
 			Position = OccupancyHit.xyz;
 		}
 	}
-
-
-	if ( DROP_ALL )
-	{
-		Behaviour.Type = Behaviour_Debris.Type;
-	}
-	
 	
 	
 	//	apply forces

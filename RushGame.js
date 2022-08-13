@@ -572,13 +572,13 @@ class Weapon_t
 		return this.GetWorldForward();
 	}
 	
-	GetWorldForward(Length=1,LocalToWorld=null)
+	GetWorldForward(Length=1,LocalToWorld=null,ForwardOffset=[0,0,0])
 	{
 		//	should use GetFirePosition()?
 		if ( !LocalToWorld )
 			LocalToWorld = this.GetLocalToWorldTransform();
 			
-		let LocalForward = this.LocalForward;
+		let LocalForward = Add3( this.LocalForward, ForwardOffset );
 		let LocalOrigin = [0,0,0];
 		LocalForward = PopMath.TransformPosition( LocalForward, LocalToWorld  );
 		LocalOrigin = PopMath.TransformPosition( LocalOrigin, LocalToWorld  );
@@ -782,7 +782,7 @@ class WeaponGun_t extends Weapon_t
 		super();
 
 		this.LastFireTimeMs = null;		//	null button is up
-		this.FireRepeatPerSec = 20;
+		this.FireRepeatPerSec = 40;
 		
 		this.Projectiles = [];
 		
@@ -874,11 +874,14 @@ class WeaponGun_t extends Weapon_t
 	
 	CreateProjectile()
 	{
+		function SmallSignedRandom(Max=0.2)
+		{
+			return (Math.random()-0.5)*(Max/2);
+		}
 		const ForceMetresPerSec = 20;
 		const Position = this.GetFirePosition();
-		const Forward = this.Forward;
-		
-		const Velocity = Multiply3( Forward, [ForceMetresPerSec,ForceMetresPerSec,ForceMetresPerSec] );
+		let ForwardNoise = [SmallSignedRandom(),SmallSignedRandom(),SmallSignedRandom()];
+		const Velocity = this.GetWorldForward( ForceMetresPerSec, null, ForwardNoise );
 		this.Projectiles.push( new Projectile_t(Position, Velocity) );
 	}
 	
@@ -1124,8 +1127,10 @@ class Game_t
 	
 	OnWeaponFired(Weapon)
 	{
+		//gr; these are graphical only
+		return;
 		//	create game projectile as a voxel
-		for ( let i=0;	i<10;	i++ )
+		//for ( let i=0;	i<10;	i++ )
 		{
 			const ForceMetresPerSec = Lerp( 15, 25, Math.random() );
 			const Position = Weapon.GetFirePosition();
