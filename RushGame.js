@@ -1,4 +1,3 @@
-import Camera_t from './PopEngine/Camera.js'
 import AssetManager from './PopEngine/AssetManager.js'
 import {CreateCubeGeometry,MergeGeometry} from './PopEngine/CommonGeometry.js'
 import {CreateTranslationMatrix,Add3,Multiply3,Dot3,lerp,Lerp,LengthSq3,Normalise3,Subtract3} from './PopEngine/Math.js'
@@ -521,13 +520,8 @@ let CubeShader = null;
 let CubeMultiViewShader = null;
 let CubePhysicsShader = null;
 let CubePhysicsMultiViewShader = null;
-let AppCamera = new Camera_t();
-//	try and emulate default XR pose a bit
-AppCamera.Position = [0,1.5,0];
-AppCamera.LookAt = [0,1.5,-1];
-AppCamera.FovVertical = 90;
 let DefaultDepthTexture = CreateRandomImage(16,16);
-let VoxelCenterPosition = [0,0,AppCamera.LookAt[2]];//AppCamera.LookAt.slice();
+let VoxelCenterPosition = [0,0,-1];
 let CubeSize = 0.02;
 
 
@@ -560,6 +554,7 @@ class Weapon_t
 	constructor()
 	{
 		this.OnFired = function(){};
+		this.LocalForward = [0,0,1];//	this needs swapping on webxr transform... need to figure this out
 	}
 	
 	Tick(TimestepSecs,PositionInsideBounds)
@@ -599,7 +594,6 @@ class WeaponWreckingProjection_t extends Weapon_t
 	constructor(LocalOriginOffset=[0,0,0])
 	{
 		super();
-		this.LocalForward = [0,0,-1];
 		this.Shape = new VoxelShape_t();
 		this.LocalToWorldTransforms = null;	//	if set, we use explicit positions instead of shape
 
@@ -786,7 +780,6 @@ class WeaponGun_t extends Weapon_t
 		
 		this.Projectiles = [];
 		
-		this.LocalForward = [0,0,-1];
 		this.Shape = new VoxelShape_t();
 		this.LocalToWorldTransforms = null;	//	if set, we use explicit positions instead of shape
 		this.Position = [0,0,0];
@@ -859,6 +852,17 @@ class WeaponGun_t extends Weapon_t
 	
 	GetRenderLocalToWorldTransforms()
 	{
+		/*
+		//	debug
+		let Positions = [];
+		let fp = this.GetFirePosition();
+		const Velocity = this.GetWorldForward( 0.1 );
+		Positions.push( fp );
+		let vp = Add3( fp, Velocity );
+		Positions.push( vp );
+		Positions = Positions.map( p => CreateTranslationMatrix(...p) );
+		return Positions;
+		*/
 		if ( this.LocalToWorldTransforms )
 			return this.LocalToWorldTransforms;
 
@@ -1148,7 +1152,7 @@ class Game_t
 	{
 		if ( !this.Weapons[Name] )
 		{
-			const Offset = (Name=='Desktop') ? [0,-0.15,0.3] : [0,0,0];
+			const Offset = [0,0,0];
 			console.log(`Creating weapon ${Name}`);
 			const WeaponType = Name.startsWith('left') ? WeaponWreckingProjection_t : WeaponGun_t;
 			this.Weapons[Name] = new WeaponType(Offset);
@@ -1177,37 +1181,9 @@ class Game_t
 		Weapon.Fire();
 		
 	}
-		
-	OnDesktopFireDown()
-	{
-		const Weapon = this.GetWeapon('Desktop');
-		//Weapon.Fire();
-		this.OnFireWeapon(Weapon);
-		
-		if ( Pop.GetTimeNowMs() > 2*1000 )
-			DropAll = true;
-	}
+
 	
-	OnDesktopFireUp()
-	{
-		const Weapon = this.GetWeapon('Desktop');
-		Weapon.ReleaseFire();
-	}
-	
-	
-	UpdateWeaponDesktop(Camera)
-	{
-		const Weapon = this.GetWeapon('Desktop');
-		//	forward seems right on webxr camera/transform, but not our camera...
-		Weapon.LocalForward = [0,0,1];
-		let Rotation = Camera.GetLocalRotationMatrix();
-		Rotation = PopMath.MatrixInverse4x4( Rotation );
-		let Position = Camera.Position;
-		//let Position = Subtract3( [0,0,0], Camera.Position );
-		//Position = Add3( Position, [0,-0.3,0.0] );
-		Weapon.SetPosition( Position, Rotation );
-	}
-	
+
 	PositionInsideBounds(Position)
 	{
 		if ( Position[1] < this.WorldBoundsFloorY )
@@ -1391,8 +1367,6 @@ export default class App_t
 		this.UserExitPromise = Pop.CreatePromise();
 	}
 	
-	get Camera()	{	return AppCamera;	}
-	
 	async WaitForUserExit()
 	{
 		return this.UserExitPromise;
@@ -1496,71 +1470,25 @@ export default class App_t
 			if ( DropButtons.includes(Button) )
 				DropAll = true;
 			//console.log(`button down ${Button}`);
-		
+					
 			//	update position as move isn't called when mouse is down
 			Device.OnMouseMove( ...arguments );
 			
+			if ( InputName == 'Mouse' && Button != 'Left' )
+				return;
+
 			const Weapon = Game.GetWeapon(InputName);
 			Game.OnFireWeapon(Weapon);
 		}.bind(this);
 
 		Device.OnMouseUp = function(xyz,Button,InputName,Transform)
 		{
+			if ( InputName == 'Mouse' && Button != 'Left' )
+				return;
+			
 			const Weapon = Game.GetWeapon(InputName);
 			Weapon.ReleaseFire();
 		}
-	}
-	
-	BindMouseCameraControls(RenderView)
-	{
-		const Camera = this.Camera;
-		const Game = this.Game;
-		
-		RenderView.OnMouseDown = function(x,y,Button,FirstDown=true)
-		{
-			if ( Button == 'Left' )
-			{
-				if ( FirstDown )
-					Game.OnDesktopFireDown();
-			}
-			
-			if ( Button == 'Right' )
-				Camera.OnCameraFirstPersonRotate( x, y, 0, FirstDown!=false );
-			
-			if ( Button == 'Middle' )
-				Camera.OnCameraPanLocal( -x, y, 0, FirstDown!=false );
-		}
-		
-		RenderView.OnMouseMove = function(x,y,Button)
-		{
-			RenderView.OnMouseDown( x, y, Button, false );
-		}
-		
-		RenderView.OnMouseScroll = function(x,y,Button,Delta)
-		{
-			Camera.OnCameraPanLocal( x, y, 0, true );
-			Camera.OnCameraPanLocal( x, y, -Delta[1] * 10.0, false );
-			//Camera.OnCameraZoom( -Delta[1] * 0.1 );
-		}
-		
-		RenderView.OnMouseUp = function(x,y,Button)
-		{
-			if ( Button == 'Left' )
-				Game.OnDesktopFireUp();
-		}
-	}
-	
-	GetDesktopRenderCommands(RenderContext,RenderView)
-	{
-		//	update camera
-		const Viewport = RenderView.GetScreenRect();
-		
-		return this.GetSceneRenderCommands( RenderContext, this.Camera, Viewport );
-	}
-	
-	GetXrRenderCommands(RenderContext,Camera)
-	{
-		return this.GetSceneRenderCommands(...arguments);
 	}
 	
 	GetSceneCameraUniforms(Camera,Viewport)
@@ -1587,10 +1515,6 @@ export default class App_t
 	
 	GetSceneRenderCommands(RenderContext,Camera,Viewport=[0,0,1,1])
 	{
-		//	make screen camera track xr camera
-		AppCamera.Position = Camera.Position.slice();
-		AppCamera.LookAt = Camera.LookAt.slice();
-		
 		this.RegisterAssets();
 		
 		
@@ -1614,7 +1538,6 @@ export default class App_t
 			RenderVoxelBufferCubes( PushCommand, RenderContext, CameraUniforms, this.Game.VoxelBuffer, this.Game.OccupancyTexture );
 		}
 		
-		this.Game.UpdateWeaponDesktop(Camera);
 		
 		//	weapon cube(shapes)
 		if ( RenderWeapons )

@@ -21,7 +21,7 @@ const float GravityY = -16.0;
 uniform vec4 ProjectilePrevPos[MAX_PROJECTILES];
 uniform vec4 ProjectileNextPos[MAX_PROJECTILES];
 uniform float CubeSize;//	radius
-#define ProjectileRadius	(CubeSize*7.0)	//	scale to make it a bit easier to hit stuff
+#define ProjectileRadius	(CubeSize*3.0)	//	scale to make it a bit easier to hit stuff
 
 #define PROJECTILE_HIT_RANDOMNESS	(0.9)
 #define SPRING_FORCE_MINMAX			vec2(2.0,6.0)
