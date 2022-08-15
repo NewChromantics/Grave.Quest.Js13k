@@ -36,6 +36,7 @@ mat4 GetLocalToWorldTransform(int CubeIndex)
 	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 );
 	vec3 WorldPosition = mix( vec3(-500),vec3(500),Position4.xyz);
 
+	WorldPosition *= vec3(0.0003);
 
 	//	some movement for testing
 	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 1000.0;
