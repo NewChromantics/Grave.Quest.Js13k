@@ -7,24 +7,19 @@ uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
 uniform float TickCount;
 
-#define TRIANGLE(a,b,c)	vec3[3](a,b,c)
 
-int GetLocalVertexPosition(int CubeVertexIndexComponent)
-{
-	ivec4 VertexPositions32 = ivec4(0xf695a00b,0x2dc1b60b,0xa66484ed,0x2ff);
-	int ChunkIndex = int( CubeVertexIndexComponent / 32 );
-	int BitIndex = CubeVertexIndexComponent % 32;
-	int Value32 = VertexPositions32[ChunkIndex];
-	int Value = (Value32 >> BitIndex) & 1;
-	return Value;
-}
-
-//	get cube position
+//	get 0..1 cube model position
 vec3 GetLocalPosition(int CubeVertexIndex)
 {
-	int x = GetLocalVertexPosition( (CubeVertexIndex*3)+0 );
-	int y = GetLocalVertexPosition( (CubeVertexIndex*3)+1 );
-	int z = GetLocalVertexPosition( (CubeVertexIndex*3)+2 );
+	int CubeVertexIndexComponent = CubeVertexIndex*3;
+	ivec4 VertexPositions30s = ivec4(0x3695a00b,0x3706d82f,0x26484ed2,0xbfe9);
+	int ChunkIndex = int( CubeVertexIndexComponent / 30 );
+	int BitIndex = CubeVertexIndexComponent % 30;
+	int Value32 = VertexPositions30s[ChunkIndex];
+	Value32 >>= BitIndex;
+	int x = Value32&1;
+	int y = (Value32&2)/2;
+	int z = (Value32&4)/4;
 	return vec3(x,y,z);
 }
 	

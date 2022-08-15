@@ -71,7 +71,7 @@ function EncodeCubeVertexes()
 		return [a,b,c];
 	}
 	//	array of 0/1s into 32bit
-	function Pack32(Bits)
+	function Pack30(Bits)
 	{
 		let Bits32 = 0;
 		for ( let i=0;	i<Bits.length;	i++ )
@@ -123,31 +123,32 @@ function EncodeCubeVertexes()
 	console.log(JSON.stringify(Positions));
 	
 	//	pack into 32bits
-	let Position32s = [];
-	for ( let i=0;	i<Positions.length;	i+=32 )
+	//	gr: pack into 30's so data is in sets of 3 to smaller reading
+	let Position30s = [];
+	for ( let i=0;	i<Positions.length;	i+=30 )
 	{
-		let Ps = Positions.slice(i,i+32);
-		let P32 = Pack32( Ps );
-		Position32s.push(P32);
+		let Ps = Positions.slice(i,i+30);
+		let P30 = Pack30( Ps );
+		Position30s.push(P30);
 	}
 
-	function Read32(Index)
+	function Read30(Index)
 	{
-		let ChunkIndex = Math.floor( Index / 32 );
-		let BitIndex = Index % 32;
-		let Value32 = Position32s[ChunkIndex];
-		let Value = (Value32 >> BitIndex) & 1;
+		let ChunkIndex = Math.floor( Index / 30 );
+		let BitIndex = Index % 30;
+		let Value30 = Position30s[ChunkIndex];
+		let Value = (Value30 >> BitIndex) & 1;
 		return Value;
 	}
 	
 	//	print as 32bit hex
-	let Position32Hexs = Position32s.map( p32 => '0x'+p32.toString(16) );
-	console.log(`Position32s`,Position32Hexs);
+	let Position30Hexs = Position30s.map( p30 => '0x'+p30.toString(16) );
+	console.log(`Position30s`,Position30Hexs);
 
 	//	validate
 	for ( let i=0;	i<Positions.length;	i++ )
 	{
-		let PositionDecoded = Read32(i);
+		let PositionDecoded = Read30(i);
 		let PositionExpected = Positions[i];
 		if ( PositionDecoded != PositionExpected )
 			throw `Encoded/Decoded position mismatch`;
