@@ -1,7 +1,7 @@
 export const Vert =
 `#version 300 es
 
-flat out  int FragCubeIndex;
+out float FragCubeIndex;
 out vec3 FragWorldPosition;
 uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
@@ -16,10 +16,16 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	int ChunkIndex = int( CubeVertexIndexComponent / 30 );
 	int BitIndex = CubeVertexIndexComponent % 30;
 	int Value32 = VertexPositions30s[ChunkIndex];
+/*
 	Value32 >>= BitIndex;
-	int x = Value32&1;
-	int y = (Value32&2)/2;
-	int z = (Value32&4)/4;
+	int x = Value32 & 1;
+	int y = Value32 & 2;
+	int z = Value32 & 4;
+	return vec3(x,y,z)/vec3(1,2,4);
+*/
+	int x = (Value32>>BitIndex) & 1;
+	int y = (Value32>>BitIndex+1) & 1;
+	int z = (Value32>>BitIndex+2) & 1;
 	return vec3(x,y,z);
 }
 	
@@ -32,9 +38,17 @@ mat4 GetLocalToWorldTransform(int CubeIndex)
 	vec3 WorldPosition = Position4.xyz;
 	//vec3 WorldPosition = vec3(PhysicsPositionUv,0);
 	*/
- CubeIndex-=100000/2;
-	vec3 WorldPosition = vec3( CubeIndex%100, CubeIndex/100, -80.0 );
+
+	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 100.0;
+	float Angle = radians(Tickf*460.0);
+	float Dist = float(CubeIndex)/1000.0;
+	vec3 WorldPosition = vec3( cos(Angle)*Dist, sin(Angle)*Dist, -80.0 );
+	
+
+	//CubeIndex-=100000/2;
+	//vec3 WorldPosition = vec3( CubeIndex%100, CubeIndex/100, -80.0 );
 	WorldPosition *= 1.8;
+
 	mat4 Transform = mat4( 1,0,0,0,
 							0,1,0,0,
 							0,0,1,0,
@@ -63,7 +77,7 @@ void main()
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
 	vec4 ProjectionPos = CameraProjectionTransform * CameraPos;
 	gl_Position = ProjectionPos;
-	FragCubeIndex = CubeIndex;
+	FragCubeIndex = float(CubeIndex);
 	FragWorldPosition = WorldPosition.xyz;
 }
 `;
@@ -72,10 +86,14 @@ export const Frag =
 `#version 300 es
 precision highp float;
 out vec4 OutFragColor;
+in float FragCubeIndex;
 
 void main()
 {
-	OutFragColor = vec4(1,0,0,1);
+	float r = mod(FragCubeIndex,1234.0)/1000.0;
+	float g = mod(FragCubeIndex,100.0)/100.0;
+	float b = mod(FragCubeIndex,7777.0)/7777.0;
+	OutFragColor = vec4(r,g,b,1);
 }
 `;
 

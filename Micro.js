@@ -98,7 +98,7 @@ function Render(w,h)
 {
 	const Viewport=[0,0,w/h,h/h];
 	gl.viewport(0,0,w,h);
-	//gl.clearColor( TickCount%60/60, 0.1, 0.3, 1.0 );
+	gl.clearColor( TickCount%60/60, 0.1, 0.3, 1.0 );
 	gl.clearColor( 0, 0.1, 0.3, 1.0 );
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.disable(gl.CULL_FACE);
