@@ -1,4 +1,4 @@
-import Camera_t from './PopEngine/Camera.js'
+import Camera_t from './Camera.js'
 import * as CubeShader from './Micro_CubeShader.js'
 
 let Camera = new Camera_t();
