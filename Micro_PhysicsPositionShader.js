@@ -17,15 +17,31 @@ precision highp float;
 out vec4 Colour;
 in vec2 uv;
 uniform sampler2D OldPositions;
+uniform sampler2D OldVelocitys;
+uniform vec4 ProjectileVel;
+uniform vec4 ProjectilePos;
+#define FragIndex	(int(gl_FragCoord.x) + int(gl_FragCoord.y)*128)
+
+float FloorY = -20.0;
+
 void main()
 {
 	Colour = vec4(uv,0,1);
+	vec4 Vel = texture(OldVelocitys, uv);
 	vec4 xyz = texture(OldPositions, uv);
-	xyz.y -= mix(0.004,0.015,xyz.w);
+
+	//xyz.y -= mix(0.004,0.015,xyz.w);
 	//	repeat
-	if ( xyz.y < 0.0 )xyz.y += 1.0;
+	//if ( xyz.y < 0.0 )xyz.y += 1.0;
+	xyz += Vel ;//* 0.01666;
+	
 	//	stick to floor
-	xyz.y = max( xyz.y, 0.45 );
+	xyz.y = max( xyz.y, FloorY );
+
+	//	new projectile data
+	if ( FragIndex == 0 && ProjectilePos.w > 0.0 )
+		xyz = ProjectilePos;
+
 	Colour = xyz;
 }
 `;

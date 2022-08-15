@@ -30,7 +30,8 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	return vec3(x,y,z);
 }
 
-float WorldScale = 600.0;
+
+#define ENABLE_STRETCH false
 
 mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 {
@@ -42,11 +43,10 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 
 	//	todo: proper stretch using delta dot localpos
 	//if ( length(LocalPosition) <= 0.5 )
-	if ( LocalPosition.y < 0.5 && length(OldPosition4-Position4) < 0.5 )
+	if ( LocalPosition.y < 0.5 && length(OldPosition4-Position4) < 0.5 && ENABLE_STRETCH )
 		Position4 = OldPosition4;
 
-	vec3 WorldPosition = mix( vec3(-WorldScale),vec3(WorldScale),Position4.xyz);
-	WorldPosition.z -= WorldScale*1.2;
+	vec3 WorldPosition = Position4.xyz;
 
 	//WorldPosition *= vec3(0.0003);
 /*
@@ -105,7 +105,9 @@ void main()
 	float r = mod(FragCubeIndex,1234.0)/1000.0;
 	float g = mod(FragCubeIndex,100.0)/100.0;
 	float b = mod(FragCubeIndex,7777.0)/7777.0;
-	OutFragColor = vec4(r,g,b,1);
+	OutFragColor = vec4(r,g*0.3,b,1);
+	if ( FragCubeIndex == 0.0 )
+		OutFragColor = vec4(0,1,0,1);
 	//OutFragColor = texture(PositionsTexture,vec2(0));
 }
 `;

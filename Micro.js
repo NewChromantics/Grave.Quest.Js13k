@@ -1,6 +1,7 @@
 import Camera_t from './Camera.js'
 import * as CubeShader from './Micro_CubeShader.js'
-import * as PhysicsShader from './Micro_PhysicsShader.js'
+import * as PhysicsPositionShader from './Micro_PhysicsPositionShader.js'
+import * as PhysicsVelocityShader from './Micro_PhysicsVelocityShader.js'
 
 let Camera = new Camera_t();
 Camera.Position = [ 0,0,10 ];
@@ -10,9 +11,23 @@ let rc;
 let gl;
 let TickCount=0;
 
-let PositionsTexture;
-let OldPositionsTexture;
-let PositionsTarget;
+const OLD=0;
+const NEW=1;
+let PositionTextures=[];
+let VelocityTextures=[];
+let TextureTarget;
+
+//	set w to 1 when new data
+let ProjectilePos=[0.5,-2,-4,1];
+let ProjectileVel=[0,4,-15,1];
+let InputQueue = [];
+let WorldSize = 200;
+let WorldNear = -20;
+
+function OnMouseDown()
+{
+	InputQueue.push('Click');
+}
 
 function CompileShader(Type,Source)
 {
@@ -44,9 +59,10 @@ class RenderContext_t
 		const RenderToFloat = gl.getExtension('EXT_color_buffer_float');
 		
 		this.CubeShader = this.CreateShader(CubeShader);
-		this.PhysicsShader = this.CreateShader(PhysicsShader);
-		
-		PositionsTarget = gl.createFramebuffer();
+		this.PhysicsPositionShader = this.CreateShader(PhysicsPositionShader);
+		this.PhysicsVelocityShader = this.CreateShader(PhysicsVelocityShader);
+
+		TextureTarget = gl.createFramebuffer();
 	}
 	
 	CreateShader(Source)
@@ -57,6 +73,14 @@ class RenderContext_t
 		gl.attachShader( Program, VertShader );
 		gl.attachShader( Program, FragShader );
 		gl.linkProgram( Program );
+		let LinkStatus = gl.getProgramParameter( Program, gl.LINK_STATUS );
+		if ( !LinkStatus )
+		{
+			//	gr: list cases when no error "" occurs here;
+			//	- too many varyings > MAX_VARYING_VECTORS
+			const Error = gl.getProgramInfoLog(Program);
+			throw `Failed to link shader ${Error}`;
+		}
 		return Program;
 	}
 	
@@ -66,22 +90,26 @@ class RenderContext_t
 export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
 	rc = new RenderContext_t(Canvas);
+	Canvas.addEventListener('mousedown',OnMouseDown,true);
 	
+	
+	AllocTextures(PositionTextures,[-WorldSize,30,WorldSize-WorldSize,0],[WorldSize,30,-WorldNear-WorldSize-WorldSize,1]);
+	AllocTextures(VelocityTextures,[0,0,0,0],[0,0,0,0]);
 	function Tick()
 	{
 		window.requestAnimationFrame(Tick);
 		//setTimeout( Tick, 500 );
 		
+		Update();
+		
 		Canvas.width = Canvas.getBoundingClientRect().width;
 		Canvas.height = Canvas.getBoundingClientRect().height;
-		Update();
-		UpdateGpu();
 		Render(Canvas.width,Canvas.height);
 		//	debug to screen
 		RenderPhysics();
 		
 		//RenderPhysics([Canvas.width,Canvas.height]);
-		
+		PostFrame();
 		TickCount++;
 		
 	}
@@ -92,7 +120,23 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 
 function Update()
 {
-	
+	//	execute input queue
+	while ( InputQueue.length )
+	{
+		let Input = InputQueue.shift();
+		if ( Input == 'Click' )
+		{
+			ProjectilePos[3] = 1;
+			ProjectileVel[3] = 1;
+		}
+	}
+}
+
+function PostFrame()
+{
+	//	unset new projectile flag
+	ProjectilePos[3] = 0;
+	ProjectileVel[3] = 0;
 }
 
 function InitTextureParams()
@@ -111,46 +155,49 @@ function InitTextureParams()
 	//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 	//gl.generateMipmap(gl.TEXTURE_2D);
 	//gl.texSubImage2D( gl.TEXTURE_2D, MipLevel, ...Rect, SourceFormat, SourceType, SubDataValues );
-
 }
 
-function UpdateGpu()
+function mix(Min,Max,Time)
 {
-	if ( !PositionsTexture )
+	return Min + (Max-Min)*Time;
+}
+
+function AllocTextures(Textures,InitMin,InitMax)
+{
+	Textures.push(null,null);
+	
+	//	todo: this will move to shader for init and maybe then dont need any texture initialisation code
+	function InitPosition(x,Index)
 	{
-		//	todo: this will move to shader for init and maybe then dont need any texture initialisation code
-		function InitPosition(x,Index)
-		{
-			return [Math.random(),Math.random()+1,Math.random(),Math.random()];
-		}
-		const Width = 512;
-		const Height = 512;
-		let PixelData = new Float32Array(new Array(Width*Height).fill(0).map(InitPosition).flat(2));
-		
-		PositionsTexture = gl.createTexture();
-		PositionsTexture.Size = [Width,Height];
-
-		const SourceFormat = gl.RGBA;
-		
-		const SourceType = gl.FLOAT;
-		const InternalFormat = gl.RGBA32F;	//	webgl2
-		const MipLevel = 0;
-		const Border = 0;
-		const Rect = [0,0,Width,Height];
-
-		//	subimage for later partial updating
-		gl.activeTexture( gl.TEXTURE0 );
-		gl.bindTexture( gl.TEXTURE_2D, PositionsTexture );
-		gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, PixelData );
-		InitTextureParams();
-
-		OldPositionsTexture = gl.createTexture();
-		OldPositionsTexture.Size = [Width,Height];
-		gl.activeTexture( gl.TEXTURE0 );
-		gl.bindTexture( gl.TEXTURE_2D, OldPositionsTexture );
-		gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, null );
-		InitTextureParams();
+		return InitMin.map( (Min,i) => mix(Min,InitMax[i],Math.random()) );
 	}
+	const Width = 128;
+	const Height = 128;
+	let PixelData = new Float32Array(new Array(Width*Height).fill(0).map(InitPosition).flat(2));
+	
+	Textures[NEW] = gl.createTexture();
+	Textures[NEW].Size = [Width,Height];
+
+	const SourceFormat = gl.RGBA;
+	
+	const SourceType = gl.FLOAT;
+	const InternalFormat = gl.RGBA32F;	//	webgl2
+	const MipLevel = 0;
+	const Border = 0;
+	const Rect = [0,0,Width,Height];
+
+	//	subimage for later partial updating
+	gl.activeTexture( gl.TEXTURE0 );
+	gl.bindTexture( gl.TEXTURE_2D, Textures[NEW] );
+	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, PixelData );
+	InitTextureParams();
+
+	Textures[OLD] = gl.createTexture();
+	Textures[OLD].Size = [Width,Height];
+	gl.activeTexture( gl.TEXTURE0 );
+	gl.bindTexture( gl.TEXTURE_2D, Textures[OLD] );
+	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, null );
+	InitTextureParams();
 }
 
 function SetUniformMat4(Program,Name,Value)
@@ -165,6 +212,12 @@ function SetUniformFloat(Program,Name,Value)
 {
 	let UniformLocation = gl.getUniformLocation( Program, Name );
 	gl.uniform1fv( UniformLocation, [Value] );
+}
+
+function SetUniformVec4(Program,Name,Value)
+{
+	let UniformLocation = gl.getUniformLocation( Program, Name );
+	gl.uniform4fv( UniformLocation, Value );
 }
 
 function SetUniformTexture(Program,Name,TextureIndex,Texture)
@@ -200,7 +253,7 @@ function Render(w,h)
 	//	https://gamedev.stackexchange.com/questions/158391/what-are-free-vertex-indices-in-webgl-2-and-how-do-they-relate-to-geometry-sha
 	//		then world positions are from texture
 	
-	let Instances = PositionsTexture.Size[0] * PositionsTexture.Size[0];
+	let Instances = PositionTextures[NEW].Size[0] * PositionTextures[NEW].Size[1];
 
 	//	set uniforms
 	//const Viewport=[0,0,1,1];
@@ -210,35 +263,28 @@ function Render(w,h)
 	SetUniformFloat(Shader,'TickCount',TickCount%1000);
 	
 	//	hardcoded texture slots
-	SetUniformTexture(Shader,'PositionsTexture',0,PositionsTexture);
-	SetUniformTexture(Shader,'OldPositionsTexture',1,OldPositionsTexture);
+	SetUniformTexture(Shader,'PositionsTexture',0,PositionTextures[NEW]);
+	SetUniformTexture(Shader,'OldPositionsTexture',1,PositionTextures[OLD]);
 
 	
 	let TriangleCount = 6*2*3;
-	let IndexCount = TriangleCount*3;
+	let IndexCount = TriangleCount;//*3;
 	gl.drawArrays( gl.TRIANGLES, 0, IndexCount*Instances );
 }
 
-function SwapPositions()
-{
-	let Old = OldPositionsTexture;
-	OldPositionsTexture = PositionsTexture;
-	PositionsTexture = Old;
-}
 
-
-function RenderPhysics(ScreenSize)
+function Blit(ScreenSize,Textures,Shader)
 {
 	//	swap
-	SwapPositions();
+	Textures.reverse();
 	
-	const Target = ScreenSize ? null : PositionsTexture;
+	const Target = ScreenSize ? null : Textures[NEW];
 	ScreenSize = ScreenSize || Target.Size;
 	
 	if ( Target )
 	{
 		//	render to texture
-		gl.bindFramebuffer( gl.FRAMEBUFFER, PositionsTarget );
+		gl.bindFramebuffer( gl.FRAMEBUFFER, TextureTarget );
 		gl.bindTexture( gl.TEXTURE_2D, null );
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, Target, 0 );
 	}
@@ -253,14 +299,28 @@ function RenderPhysics(ScreenSize)
 	gl.disable(gl.CULL_FACE);
 
 	//	bind shader
-	const Shader = rc.PhysicsShader;
 	gl.useProgram( Shader );
 
 	SetUniformFloat( Shader,'TickCount',TickCount);
 	if ( Target )
-		SetUniformTexture( Shader,'OldPositions',0,OldPositionsTexture);
+	{
+		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[OLD]);
+		SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[OLD]);
+	}
 	else
-		SetUniformTexture( Shader,'OldPositions',0,PositionsTexture);
-	
+	{
+		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[NEW]);
+		SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[NEW]);
+	}
+	SetUniformVec4(Shader,'ProjectilePos',ProjectilePos);
+	SetUniformVec4(Shader,'ProjectileVel',ProjectileVel);
+
 	gl.drawArrays( gl.TRIANGLE_FAN, 0, 4 );
+}
+
+
+function RenderPhysics(ScreenSize)
+{
+	Blit(ScreenSize,PositionTextures,rc.PhysicsPositionShader);
+	Blit(ScreenSize,VelocityTextures,rc.PhysicsVelocityShader);
 }
