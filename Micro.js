@@ -4,7 +4,7 @@ import * as CubeShader from './Micro_CubeShader.js'
 let Camera = new Camera_t();
 Camera.Position = [ 0,0,10 ];
 Camera.LookAt = [ 0,0,0 ];
-Camera.FovVertical = 60;
+Camera.FovVertical = 45;
 let rc;
 let gl;
 let TickCount=0;
