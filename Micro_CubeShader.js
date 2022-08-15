@@ -9,30 +9,23 @@ uniform float TickCount;
 
 #define TRIANGLE(a,b,c)	vec3[3](a,b,c)
 
-vec3 GetLocalPosition(int TriangleIndex,int VertexIndex)
+int GetLocalVertexPosition(int CubeVertexIndexComponent)
 {
-	vec3 tln = vec3(0,0,0);
-	vec3 trn = vec3(1,0,0);
-	vec3 brn = vec3(1,1,0);
-	vec3 bln = vec3(0,1,0);
-	vec3 tlf = vec3(0,0,1);
-	vec3 trf = vec3(1,0,1);
-	vec3 brf = vec3(1,1,1);
-	vec3 blf = vec3(0,1,1);
-	vec3 Triangle[3];
-	if ( TriangleIndex==0 )	Triangle = TRIANGLE( brn, trn, tln );
-	if ( TriangleIndex==1 )	Triangle = TRIANGLE( tln, bln, brn );
-	if ( TriangleIndex==2 )	Triangle = TRIANGLE( trf, tlf, blf );
-	if ( TriangleIndex==3 )	Triangle = TRIANGLE( blf, brf, trf );
-	if ( TriangleIndex==4 )	Triangle = TRIANGLE( tln, tlf, trf );
-	if ( TriangleIndex==5 )	Triangle = TRIANGLE( trf, trn, tln );
-	if ( TriangleIndex==6 )	Triangle = TRIANGLE( brf, blf, bln );
-	if ( TriangleIndex==7 )	Triangle = TRIANGLE( bln, brn, brf );
-	if ( TriangleIndex==8 )	Triangle = TRIANGLE( tlf, tln, bln );
-	if ( TriangleIndex==9 )	Triangle = TRIANGLE( bln, blf, tlf );
-	if ( TriangleIndex==10 )	Triangle = TRIANGLE( trn, trf, brf );
-	if ( TriangleIndex==11 )	Triangle = TRIANGLE( brf, brn, trn );
-	return Triangle[VertexIndex];
+	ivec4 VertexPositions32 = ivec4(0xf695a00b,0x2dc1b60b,0xa66484ed,0x2ff);
+	int ChunkIndex = int( CubeVertexIndexComponent / 32 );
+	int BitIndex = CubeVertexIndexComponent % 32;
+	int Value32 = VertexPositions32[ChunkIndex];
+	int Value = (Value32 >> BitIndex) & 1;
+	return Value;
+}
+
+//	get cube position
+vec3 GetLocalPosition(int CubeVertexIndex)
+{
+	int x = GetLocalVertexPosition( (CubeVertexIndex*3)+0 );
+	int y = GetLocalVertexPosition( (CubeVertexIndex*3)+1 );
+	int z = GetLocalVertexPosition( (CubeVertexIndex*3)+2 );
+	return vec3(x,y,z);
 }
 	
 mat4 GetLocalToWorldTransform(int CubeIndex)
@@ -67,9 +60,9 @@ void main()
 	//int CubeIndex = int(TickCount);
 	int CubeIndex = gl_VertexID / (3*2*6);
 	int VertexOfCube = gl_VertexID % (3*2*6);
-	int TriangleIndex = VertexOfCube /3;
-	int VertexIndex = VertexOfCube % 3;
-	vec3 LocalPosition = GetLocalPosition( TriangleIndex, VertexIndex );
+	//int TriangleIndex = VertexOfCube /3;
+	//int VertexIndex = VertexOfCube % 3;
+	vec3 LocalPosition = GetLocalPosition( VertexOfCube );
 	mat4 LocalToWorldTransform = GetLocalToWorldTransform( CubeIndex );
 	vec3 WorldPosition = GetWorldPosition( LocalToWorldTransform, LocalPosition );
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space

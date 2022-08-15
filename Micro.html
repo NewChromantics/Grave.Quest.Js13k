@@ -56,5 +56,106 @@ function StartXrCallback(Start)
 
 Bootup(Canvas,StartXrCallback).then(console.log).catch(console.error);
 
+
+function EncodeCubeVertexes()
+{
+	let Positions = [];
+
+	function vec3(a,b,c)
+	{
+		return [a,b,c];
+	}
+	//#define TRIANGLE(a,b,c)	vec3[3](a,b,c)
+	function TRIANGLE(a,b,c)
+	{
+		return [a,b,c];
+	}
+	//	array of 0/1s into 32bit
+	function Pack32(Bits)
+	{
+		let Bits32 = 0;
+		for ( let i=0;	i<Bits.length;	i++ )
+		{
+			let Value = Bits[i] ? 1 : 0;
+			let Value32 = (Value << i) >>> 0;	//	>>>0 to force switching to unsigned
+			Bits32 = (Bits32|Value32) >>> 0;
+		}
+		return Bits32;
+	}
+	
+	//	cube is 3positions * 2triangles * 6 faces
+	//	*3 positions (0..1)
+	//	108 1 or 0 = 3.375 32bits
+	//	generate 1010101010101010 array which we can pack and &
+	for ( let i=0;	i<3*2*6;	i++ )
+	{
+		let CubeVertexIndex = i;
+
+		let TriangleIndex = Math.floor(CubeVertexIndex /3);
+		let VertexIndex = Math.floor(CubeVertexIndex % 3);
+
+		let tln = vec3(0,0,0);
+		let trn = vec3(1,0,0);
+		let brn = vec3(1,1,0);
+		let bln = vec3(0,1,0);
+		let tlf = vec3(0,0,1);
+		let trf = vec3(1,0,1);
+		let brf = vec3(1,1,1);
+		let blf = vec3(0,1,1);
+		let Triangle;
+		if ( TriangleIndex==0 )	Triangle = TRIANGLE( brn, trn, tln );
+		if ( TriangleIndex==1 )	Triangle = TRIANGLE( tln, bln, brn );
+		if ( TriangleIndex==2 )	Triangle = TRIANGLE( trf, tlf, blf );
+		if ( TriangleIndex==3 )	Triangle = TRIANGLE( blf, brf, trf );
+		if ( TriangleIndex==4 )	Triangle = TRIANGLE( tln, tlf, trf );
+		if ( TriangleIndex==5 )	Triangle = TRIANGLE( trf, trn, tln );
+		if ( TriangleIndex==6 )	Triangle = TRIANGLE( brf, blf, bln );
+		if ( TriangleIndex==7 )	Triangle = TRIANGLE( bln, brn, brf );
+		if ( TriangleIndex==8 )	Triangle = TRIANGLE( tlf, tln, bln );
+		if ( TriangleIndex==9 )	Triangle = TRIANGLE( bln, blf, tlf );
+		if ( TriangleIndex==10 )	Triangle = TRIANGLE( trn, trf, brf );
+		if ( TriangleIndex==11 )	Triangle = TRIANGLE( brf, brn, trn );
+		//return Triangle[VertexIndex];
+		let VertexPos = Triangle[VertexIndex];
+		Positions.push(...VertexPos);
+	}
+	console.log(`All positions`,Positions);
+	console.log(JSON.stringify(Positions));
+	
+	//	pack into 32bits
+	let Position32s = [];
+	for ( let i=0;	i<Positions.length;	i+=32 )
+	{
+		let Ps = Positions.slice(i,i+32);
+		let P32 = Pack32( Ps );
+		Position32s.push(P32);
+	}
+
+	function Read32(Index)
+	{
+		let ChunkIndex = Math.floor( Index / 32 );
+		let BitIndex = Index % 32;
+		let Value32 = Position32s[ChunkIndex];
+		let Value = (Value32 >> BitIndex) & 1;
+		return Value;
+	}
+	
+	//	print as 32bit hex
+	let Position32Hexs = Position32s.map( p32 => '0x'+p32.toString(16) );
+	console.log(`Position32s`,Position32Hexs);
+
+	//	validate
+	for ( let i=0;	i<Positions.length;	i++ )
+	{
+		let PositionDecoded = Read32(i);
+		let PositionExpected = Positions[i];
+		if ( PositionDecoded != PositionExpected )
+			throw `Encoded/Decoded position mismatch`;
+	}
+	console.log(`All values matched`);
+	
+}
+	EncodeCubeVertexes();
+
 </script>
 
