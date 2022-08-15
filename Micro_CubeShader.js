@@ -6,7 +6,7 @@ out vec3 FragWorldPosition;
 uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
 uniform float TickCount;
-
+uniform sampler2D PositionsTexture;
 
 //	get 0..1 cube model position
 vec3 GetLocalPosition(int CubeVertexIndex)
@@ -31,23 +31,24 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	
 mat4 GetLocalToWorldTransform(int CubeIndex)
 {
-	/*
-	//	texelfetch seems a tiny bit faster
-	//vec4 Position4 = texture( PhysicsPositionsTexture, PhysicsPositionUv.xy );
-	vec4 Position4 = texelFetch( PhysicsPositionsTexture, ivec2(PhysicsPositionUv.xy*PhysicsPositionsTextureSize), 0 );
+	int u = CubeIndex % 1024;
+	int v = (CubeIndex/1024);
+	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 ) - vec4(0.5);
 	vec3 WorldPosition = Position4.xyz;
-	//vec3 WorldPosition = vec3(PhysicsPositionUv,0);
-	*/
+	//WorldPosition = vec3(1);
+	WorldPosition*=vec3(500,500,-1000);
 
-	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 100.0;
+
+
+	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 1000.0;
 	float Angle = radians(Tickf*460.0);
-	float Dist = float(CubeIndex)/1000.0;
-	vec3 WorldPosition = vec3( cos(Angle)*Dist, sin(Angle)*Dist, -80.0 );
+	float Dist = float(CubeIndex)/10000.0;
+	WorldPosition += vec3( cos(Angle)*Dist, sin(Angle)*Dist, -80.0 );
 	
 
 	//CubeIndex-=100000/2;
 	//vec3 WorldPosition = vec3( CubeIndex%100, CubeIndex/100, -80.0 );
-	WorldPosition *= 1.8;
+	//WorldPosition *= 1.8;
 
 	mat4 Transform = mat4( 1,0,0,0,
 							0,1,0,0,
@@ -87,6 +88,7 @@ export const Frag =
 precision highp float;
 out vec4 OutFragColor;
 in float FragCubeIndex;
+uniform sampler2D PositionsTexture;
 
 void main()
 {
@@ -94,6 +96,7 @@ void main()
 	float g = mod(FragCubeIndex,100.0)/100.0;
 	float b = mod(FragCubeIndex,7777.0)/7777.0;
 	OutFragColor = vec4(r,g,b,1);
+	//OutFragColor = texture(PositionsTexture,vec2(0));
 }
 `;
 
