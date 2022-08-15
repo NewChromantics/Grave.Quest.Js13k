@@ -31,15 +31,13 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	
 mat4 GetLocalToWorldTransform(int CubeIndex)
 {
-	int u = CubeIndex % 1024;
-	int v = (CubeIndex/1024);
-	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 ) - vec4(0.5);
-	vec3 WorldPosition = Position4.xyz;
-	//WorldPosition = vec3(1);
-	WorldPosition*=vec3(500,500,-1000);
+	int u = CubeIndex % textureSize(PositionsTexture,0).x;
+	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
+	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 );
+	vec3 WorldPosition = mix( vec3(-500),vec3(500),Position4.xyz);
 
 
-
+	//	some movement for testing
 	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 1000.0;
 	float Angle = radians(Tickf*460.0);
 	float Dist = float(CubeIndex)/10000.0;
