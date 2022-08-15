@@ -1,7 +1,7 @@
 JS13k 2022 entry
 =============
 The goal is to be a vanilla js webxr voxel shooter.
-(disco.feedback)[https://disco.feedback]
+[disco.feedback](https://disco.feedback)
 
 
 13kb notes
