@@ -29,7 +29,9 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	int z = (Value32>>BitIndex+2) & 1;
 	return vec3(x,y,z);
 }
-	
+
+float WorldScale = 600.0;
+
 mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 {
 	int u = CubeIndex % textureSize(PositionsTexture,0).x;
@@ -39,19 +41,21 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 );
 
 	//	todo: proper stretch using delta dot localpos
-	if ( length(LocalPosition) <= 0.5 )
+	//if ( length(LocalPosition) <= 0.5 )
+	if ( LocalPosition.y < 0.5 && length(OldPosition4-Position4) < 0.5 )
 		Position4 = OldPosition4;
 
-	vec3 WorldPosition = mix( vec3(-500),vec3(500),Position4.xyz);
+	vec3 WorldPosition = mix( vec3(-WorldScale),vec3(WorldScale),Position4.xyz);
+	WorldPosition.z -= WorldScale*1.2;
 
 	//WorldPosition *= vec3(0.0003);
-
+/*
 	//	some movement for testing
 	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 1000.0;
 	float Angle = radians(Tickf*460.0);
 	float Dist = float(CubeIndex)/10000.0;
 	WorldPosition += vec3( cos(Angle)*Dist, sin(Angle)*Dist, -80.0 );
-
+*/
 	//CubeIndex-=100000/2;
 	//vec3 WorldPosition = vec3( CubeIndex%100, CubeIndex/100, -80.0 );
 	//WorldPosition *= 1.8;
