@@ -79,7 +79,9 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		Render(Canvas.width,Canvas.height);
 		//	debug to screen
 		RenderPhysics();
+		
 		//RenderPhysics([Canvas.width,Canvas.height]);
+		
 		TickCount++;
 		
 	}
@@ -119,10 +121,10 @@ function UpdateGpu()
 		//	todo: this will move to shader for init and maybe then dont need any texture initialisation code
 		function InitPosition(x,Index)
 		{
-			return [Math.random(),Math.random(),Math.random(),Math.random()];
+			return [Math.random(),Math.random()+1,Math.random(),Math.random()];
 		}
-		const Width = 256;
-		const Height = 256;
+		const Width = 512;
+		const Height = 512;
 		let PixelData = new Float32Array(new Array(Width*Height).fill(0).map(InitPosition).flat(2));
 		
 		PositionsTexture = gl.createTexture();
