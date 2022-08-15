@@ -1,5 +1,6 @@
 import Camera_t from './Camera.js'
 import * as CubeShader from './Micro_CubeShader.js'
+import * as PhysicsShader from './Micro_PhysicsShader.js'
 
 let Camera = new Camera_t();
 Camera.Position = [ 0,0,10 ];
@@ -10,6 +11,7 @@ let gl;
 let TickCount=0;
 
 let PositionsTexture;
+let OldPositionsTexture;
 
 function CompileShader(Type,Source)
 {
@@ -38,13 +40,14 @@ class RenderContext_t
 		gl = Canvas.getContext('webgl2', Options );
 		//this.OnResize();
 		
-		this.CubeShader = this.CreateShader();
+		this.CubeShader = this.CreateShader(CubeShader);
+		this.PhsyicsShader = this.CreateShader(PhysicsShader);
 	}
 	
-	CreateShader()
+	CreateShader(Source)
 	{
-		const FragShader = CompileShader( gl.FRAGMENT_SHADER, CubeShader.Frag);
-		const VertShader = CompileShader( gl.VERTEX_SHADER, CubeShader.Vert);
+		const FragShader = CompileShader( gl.FRAGMENT_SHADER, Source.Frag);
+		const VertShader = CompileShader( gl.VERTEX_SHADER, Source.Vert);
 		let Program = gl.createProgram();
 		gl.attachShader( Program, VertShader );
 		gl.attachShader( Program, FragShader );
@@ -88,8 +91,8 @@ function UpdateGpu()
 		{
 			return [Math.random(),Math.random(),Math.random(),Math.random()];
 		}
-		const Width = 512;
-		const Height = 512;
+		const Width = 128;
+		const Height = 128;
 		let PixelData = new Float32Array(new Array(Width*Height).fill(0).map(InitPosition).flat(2));
 		
 		PositionsTexture = gl.createTexture();
@@ -115,6 +118,13 @@ function UpdateGpu()
 		//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		//gl.generateMipmap(gl.TEXTURE_2D);
 		//gl.texSubImage2D( gl.TEXTURE_2D, MipLevel, ...Rect, SourceFormat, SourceType, SubDataValues );
+
+		OldPositionsTexture = gl.createTexture();
+		gl.activeTexture( gl.TEXTURE1 );
+		gl.bindTexture( gl.TEXTURE_2D, OldPositionsTexture );
+		gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, null );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 	}
 }
 
@@ -135,15 +145,10 @@ function SetUniformFloat(Program,Name,Value)
 function SetUniformTexture(Program,Name,TextureIndex,Texture)
 {
 	let UniformLocation = gl.getUniformLocation( Program, Name );
-	let GlTextureNames = [ gl.TEXTURE0, gl.TEXTURE1, gl.TEXTURE2, gl.TEXTURE3, gl.TEXTURE4, gl.TEXTURE5, gl.TEXTURE6, gl.TEXTURE7 ];
-	let TextureKey = `TEXTURE${TextureIndex}`;
-	//let TextureValue = gl[TextureKey];
-	//let TextureValue = GlTextureNames[TextureIndex];
-	let TextureValue = gl.TEXTURE0;
+	let TextureValue = gl.TEXTURE0+TextureIndex;
 	gl.activeTexture( TextureValue );
 	gl.bindTexture( gl.TEXTURE_2D, Texture );
-	//gl.uniform1iv( UniformLocation, [TextureIndex] );
-	gl.uniform1i( UniformLocation, 0);
+	gl.uniform1iv( UniformLocation, [TextureIndex] );
 	if ( !gl.isTexture(Texture) )
 		throw `${Texture} Not a texture?`
 }
@@ -178,6 +183,29 @@ function Render(w,h)
 	
 	//	hardcoded texture slots
 	SetUniformTexture(rc.CubeShader,'PositionsTexture',0,PositionsTexture);
+	SetUniformTexture(rc.CubeShader,'OldPositionsTexture',1,OldPositionsTexture);
+
+	
+	let TriangleCount = 6*2*3;
+	let IndexCount = TriangleCount*3;
+	gl.drawArrays( gl.TRIANGLES, 0, IndexCount*Instances );
+}
+
+
+function RenderPhysics()
+{
+	const Target = PositionsTexture;
+	
+	gl.viewport(0,0,Target.Width,Target.Height);
+	gl.clearColor(1,0,0,1);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.disable(gl.CULL_FACE);
+
+	//	bind shader
+	gl.useProgram( rc.PhysicsShader );
+
+	SetUniformFloat(rc.CubeShader,'TickCount',TickCount%Instances);
+	SetUniformTexture(rc.CubeShader,'OldPositions',0,OldPositionsTexture);
 	
 	
 	let TriangleCount = 6*2*3;

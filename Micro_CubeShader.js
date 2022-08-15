@@ -7,6 +7,7 @@ uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
 uniform float TickCount;
 uniform sampler2D PositionsTexture;
+uniform sampler2D OldPositionsTexture;
 
 //	get 0..1 cube model position
 vec3 GetLocalPosition(int CubeVertexIndex)
@@ -29,21 +30,27 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	return vec3(x,y,z);
 }
 	
-mat4 GetLocalToWorldTransform(int CubeIndex)
+mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 {
 	int u = CubeIndex % textureSize(PositionsTexture,0).x;
 	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
+
+	vec4 OldPosition4 = texelFetch( OldPositionsTexture, ivec2(u,v), 0 );
 	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 );
+
+	//	todo: proper stretch using delta dot localpos
+	if ( length(LocalPosition) <= 0.5 )
+		Position4 = OldPosition4;
+
 	vec3 WorldPosition = mix( vec3(-500),vec3(500),Position4.xyz);
 
-	WorldPosition *= vec3(0.0003);
+	//WorldPosition *= vec3(0.0003);
 
 	//	some movement for testing
 	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 1000.0;
 	float Angle = radians(Tickf*460.0);
 	float Dist = float(CubeIndex)/10000.0;
 	WorldPosition += vec3( cos(Angle)*Dist, sin(Angle)*Dist, -80.0 );
-	
 
 	//CubeIndex-=100000/2;
 	//vec3 WorldPosition = vec3( CubeIndex%100, CubeIndex/100, -80.0 );
@@ -72,7 +79,7 @@ void main()
 	//int TriangleIndex = VertexOfCube /3;
 	//int VertexIndex = VertexOfCube % 3;
 	vec3 LocalPosition = GetLocalPosition( VertexOfCube );
-	mat4 LocalToWorldTransform = GetLocalToWorldTransform( CubeIndex );
+	mat4 LocalToWorldTransform = GetLocalToWorldTransform( CubeIndex, LocalPosition );
 	vec3 WorldPosition = GetWorldPosition( LocalToWorldTransform, LocalPosition );
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
 	vec4 ProjectionPos = CameraProjectionTransform * CameraPos;
