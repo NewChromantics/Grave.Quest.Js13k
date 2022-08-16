@@ -9,6 +9,19 @@ uniform float TickCount;
 uniform sampler2D PositionsTexture;
 uniform sampler2D OldPositionsTexture;
 
+#define ENABLE_SUPER_SMALL
+
+
+
+#if defined(ENABLE_SUPER_SMALL)
+vec3 GetLocalPosition(int v)
+{
+	v*=3;
+	int x = ivec4(0x3695a00b,0x3706d82f,0x26484ed2,0xbfe9)[v/30]>>v%30;
+	return sign(vec3(x&1,x&2,x&4));
+}
+#else
+
 //	get 0..1 cube model position
 vec3 GetLocalPosition(int CubeVertexIndex)
 {
@@ -35,7 +48,7 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	return vec3(x,y,z);
 */
 }
-
+#endif
 
 #define ENABLE_STRETCH false
 
