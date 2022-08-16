@@ -17,6 +17,10 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	int ChunkIndex = int( CubeVertexIndexComponent / 30 );
 	int BitIndex = CubeVertexIndexComponent % 30;
 	int Value32 = VertexPositions30s[ChunkIndex];
+	int xyz = Value32 >> BitIndex;
+	//	gr: this would be shorter, but div executed first!
+	//return vec3(xyz&1,xyz&2/2,xyz&4/4);
+	return sign(vec3(xyz&1,xyz&2,xyz&4));	//	sign turns 1,2,4 into 1,1,1
 /*
 	Value32 >>= BitIndex;
 	int x = Value32 & 1;
@@ -24,10 +28,12 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 	int z = Value32 & 4;
 	return vec3(x,y,z)/vec3(1,2,4);
 */
+/*
 	int x = (Value32>>BitIndex) & 1;
 	int y = (Value32>>BitIndex+1) & 1;
 	int z = (Value32>>BitIndex+2) & 1;
 	return vec3(x,y,z);
+*/
 }
 
 
