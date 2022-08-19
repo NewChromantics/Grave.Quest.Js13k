@@ -258,13 +258,13 @@ function Render(w,h)
 	//	set uniforms
 	//const Viewport=[0,0,1,1];
 	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.GetWorldToCameraMatrix());
-	SetUniformMat4(Shader,'CameraToWorldTransform',Camera.GetLocalToWorldMatrix());
 	SetUniformMat4(Shader,'CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
 	SetUniformFloat(Shader,'TickCount',TickCount%1000);
 	
 	//	hardcoded texture slots
 	SetUniformTexture(Shader,'PositionsTexture',0,PositionTextures[NEW]);
 	SetUniformTexture(Shader,'OldPositionsTexture',1,PositionTextures[OLD]);
+	SetUniformTexture(Shader,'VelocitiesTexture',2,VelocityTextures[OLD]);
 
 	
 	let TriangleCount = 6*2*3;

@@ -8,6 +8,7 @@ uniform mat4 CameraProjectionTransform;
 uniform float TickCount;
 uniform sampler2D PositionsTexture;
 uniform sampler2D OldPositionsTexture;
+uniform sampler2D VelocitiesTexture;
 
 #define ENABLE_SUPER_SMALL
 
@@ -51,7 +52,6 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 }
 #endif
 
-#define ENABLE_STRETCH false
 
 mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 {
@@ -60,25 +60,7 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 
 	vec4 OldPosition4 = texelFetch( OldPositionsTexture, ivec2(u,v), 0 );
 	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 );
-
-	//	todo: proper stretch using delta dot localpos
-	//if ( length(LocalPosition) <= 0.5 )
-	if ( LocalPosition.y < 0.5 && length(OldPosition4-Position4) < 0.5 && ENABLE_STRETCH )
-		Position4 = OldPosition4;
-
 	vec3 WorldPosition = Position4.xyz;
-
-	//WorldPosition *= vec3(0.0003);
-/*
-	//	some movement for testing
-	float Tickf = mod(TickCount+float(CubeIndex),10000.0) / 1000.0;
-	float Angle = radians(Tickf*460.0);
-	float Dist = float(CubeIndex)/10000.0;
-	WorldPosition += vec3( cos(Angle)*Dist, sin(Angle)*Dist, -80.0 );
-*/
-	//CubeIndex-=100000/2;
-	//vec3 WorldPosition = vec3( CubeIndex%100, CubeIndex/100, -80.0 );
-	//WorldPosition *= 1.8;
 
 	mat4 Transform = mat4( 1,0,0,0,
 							0,1,0,0,
@@ -87,13 +69,59 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 	return Transform;
 }
 
-vec3 GetWorldPosition(mat4 LocalToWorldTransform,vec3 LocalPosition)
+float CubeSize = 1.0;
+float VelocityStretch = 100.0;
+bool UsePreviousPositionsTexture = false;
+
+vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPosition)
 {
+	//	stretching relies on cube being -1...1
+	//	gr: or does it? cubes stretch better, but always double size
+	//LocalPosition = mix( vec3(-CubeSize),vec3(CubeSize), LocalPosition);
+	LocalPosition*=CubeSize;
+//vec4 WorldPos = LocalToWorldTransform * vec4(LocalPosition,1.0);
+//WorldPos.xyz *= WorldPos.www;
+//WorldPos.w = 1.0;
+
+	int u = CubeIndex % textureSize(PositionsTexture,0).x;
+	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
+	vec3 WorldVelocity = texelFetch( VelocitiesTexture, ivec2(u,v), 0 ).xyz;
+
 	vec4 WorldPos = LocalToWorldTransform * vec4(LocalPosition,1.0);
 	WorldPos.xyz *= WorldPos.www;
 	WorldPos.w = 1.0;
+
+	vec4 OriginWorldPos = LocalToWorldTransform * vec4(0,0,0,1);
+	OriginWorldPos.xyz *= OriginWorldPos.www;
+	OriginWorldPos.w = 1.0;
+	
+	//	stretch world pos along velocity
+	vec3 TailDelta = -WorldVelocity * VelocityStretch * (1.0/60.0);
+
+	
+	vec3 LocalPosInWorld = WorldPos.xyz - OriginWorldPos.xyz;
+	
+	//	this is the opposite of what it should be and shows the future
+	//	but better than flashes of past that wasnt there (better if we just stored prev pos)
+	float ForwardWeight = UsePreviousPositionsTexture ? 0.9 : 0.9;
+	float BackwarddWeight = UsePreviousPositionsTexture ? 0.0 : 0.1;
+	vec3 NextPos = WorldPos.xyz - (TailDelta*ForwardWeight);
+	vec3 PrevPos = WorldPos.xyz + (TailDelta*BackwarddWeight);
+	
+	//	"lerp" between depending on whether we're at front or back
+	//	^^ this is why we're getting angled shapes, even if we did a cut off we
+	//	could have 1/8 verts in front
+	
+	//	gr; this nvidia object space motion blur stretches if the [current]normal
+	//		is inline(dot(next-prev,velocity)>0) with the motion vector(velocity)... in EYESPACE
+	//	https://www.nvidia.com/docs/io/8230/gdc2003_openglshadertricks.pdf
+	float Scale = dot( normalize(LocalPosInWorld), normalize(-TailDelta) );
+	float Lerp = Scale > 0.0 ? 1.0 : 0.0;
+	
+	WorldPos.xyz = mix( PrevPos, NextPos, Lerp );
 	return WorldPos.xyz;
 }
+
 
 void main()
 {
@@ -104,7 +132,7 @@ void main()
 	//int VertexIndex = VertexOfCube % 3;
 	vec3 LocalPosition = GetLocalPosition( VertexOfCube );
 	mat4 LocalToWorldTransform = GetLocalToWorldTransform( CubeIndex, LocalPosition );
-	vec3 WorldPosition = GetWorldPosition( LocalToWorldTransform, LocalPosition );
+	vec3 WorldPosition = GetWorldPosition( CubeIndex, LocalToWorldTransform, LocalPosition );
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
 	vec4 ProjectionPos = CameraProjectionTransform * CameraPos;
 	gl_Position = ProjectionPos;
