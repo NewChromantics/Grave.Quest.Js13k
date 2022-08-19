@@ -57,7 +57,7 @@ function OnMouseWheel(Event)
 	let Deltaz = Event.deltaY * DeltaScale;
 	let Forward3 = Camera.GetForward();
 	Forward3 = Multiply3( Forward3, [Deltaz,Deltaz,Deltaz] );
-	Camera.MoveCameraAndLookAt( Forward3 );
+	Camera.MovePositionAndLookAt( Forward3 );
 }
 
 function CompileShader(Type,Source)
@@ -255,17 +255,11 @@ function SetUniformMat4(Program,Name,Value)
 	gl.uniformMatrix4fv( UniformLocation, Transpose, Value );
 }
 
-
-function SetUniformFloat(Program,Name,Value)
+function SetUniformVector(Program,Name,Value)
 {
 	let UniformLocation = gl.getUniformLocation( Program, Name );
-	gl.uniform1fv( UniformLocation, [Value] );
-}
-
-function SetUniformVec4(Program,Name,Value)
-{
-	let UniformLocation = gl.getUniformLocation( Program, Name );
-	gl.uniform4fv( UniformLocation, Value );
+	let f = `uniform${Value.length}fv`;
+	gl[f]( UniformLocation, Value );
 }
 
 function SetUniformTexture(Program,Name,TextureIndex,Texture)
@@ -275,8 +269,6 @@ function SetUniformTexture(Program,Name,TextureIndex,Texture)
 	gl.activeTexture( TextureValue );
 	gl.bindTexture( gl.TEXTURE_2D, Texture );
 	gl.uniform1iv( UniformLocation, [TextureIndex] );
-	if ( !gl.isTexture(Texture) )
-		throw `${Texture} Not a texture?`
 }
 
 
@@ -307,7 +299,7 @@ function Render(w,h)
 	//const Viewport=[0,0,1,1];
 	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.GetWorldToCameraMatrix());
 	SetUniformMat4(Shader,'CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
-	SetUniformFloat(Shader,'TickCount',TickCount%1000);
+	SetUniformVector(Shader,'TickCount',[TickCount%1000]);
 	
 	//	hardcoded texture slots
 	SetUniformTexture(Shader,'PositionsTexture',0,PositionTextures[NEW]);
@@ -349,7 +341,7 @@ function Blit(ScreenSize,Textures,Shader)
 	//	bind shader
 	gl.useProgram( Shader );
 
-	SetUniformFloat( Shader,'TickCount',TickCount);
+	SetUniformVector( Shader,'TickCount',[TickCount]);
 	if ( Target )
 	{
 		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[OLD]);
@@ -360,8 +352,8 @@ function Blit(ScreenSize,Textures,Shader)
 		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[NEW]);
 		SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[NEW]);
 	}
-	SetUniformVec4(Shader,'ProjectilePos',ProjectilePos);
-	SetUniformVec4(Shader,'ProjectileVel',ProjectileVel);
+	SetUniformVector(Shader,'ProjectilePos',ProjectilePos);
+	SetUniformVector(Shader,'ProjectileVel',ProjectileVel);
 
 	gl.drawArrays( gl.TRIANGLE_FAN, 0, 4 );
 }
