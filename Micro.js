@@ -29,6 +29,37 @@ function OnMouseDown()
 	InputQueue.push('Click');
 }
 
+let MouseLastPos = null;
+function OnMouseMove(Event)
+{
+	let Rect = Event.currentTarget.getBoundingClientRect();
+	let ClientX = Event.pageX || Event.clientX;
+	let ClientY = Event.pageY || Event.clientY;
+	let x = ClientX - Rect.left;
+	let y = ClientY - Rect.top;
+	
+	let First = MouseLastPos==null;
+	x *= 2;
+	y *= 1;
+	Camera.OnCameraFirstPersonRotate( x, y, 0, First );
+	
+	MouseLastPos = [x,y];
+}
+
+function Multiply3(a,b)
+{
+	return [ a[0]*b[0], a[1]*b[1], a[2]*b[2] ];
+}
+
+function OnMouseWheel(Event)
+{
+	let DeltaScale = -0.6;
+	let Deltaz = Event.deltaY * DeltaScale;
+	let Forward3 = Camera.GetForward();
+	Forward3 = Multiply3( Forward3, [Deltaz,Deltaz,Deltaz] );
+	Camera.MoveCameraAndLookAt( Forward3 );
+}
+
 function CompileShader(Type,Source)
 {
 	const Shader = gl.createShader(Type);
@@ -91,7 +122,9 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
 	rc = new RenderContext_t(Canvas);
 	Canvas.addEventListener('mousedown',OnMouseDown,true);
-	
+	Canvas.addEventListener('mousemove',OnMouseMove,true);
+	Canvas.addEventListener('wheel',OnMouseWheel,true);
+
 	
 	AllocTextures(PositionTextures,[-WorldSize,30,WorldSize-WorldSize,0],[WorldSize,30,-WorldNear-WorldSize-WorldSize,1]);
 	AllocTextures(VelocityTextures,[0,0,0,0],[0,0,0,0]);
@@ -117,6 +150,12 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	return 'Bootup finished';
 }
 
+function Set3(Source,Target,Scale=1)
+{
+	Target[0] = Source[0] * Scale;
+	Target[1] = Source[1] * Scale;
+	Target[2] = Source[2] * Scale;
+}
 
 function Update()
 {
@@ -126,6 +165,15 @@ function Update()
 		let Input = InputQueue.shift();
 		if ( Input == 'Click' )
 		{
+			let Forward = Camera.GetForward();
+			Set3( Forward, ProjectileVel, 20 );
+			Set3( Camera.Position, ProjectilePos );
+			ProjectilePos[0] += Forward[0];
+			ProjectilePos[1] += Forward[1];
+			ProjectilePos[1] -= 15;
+			ProjectilePos[2] += Forward[2];
+			ProjectileVel[1] += 6;
+			
 			ProjectilePos[3] = 1;
 			ProjectileVel[3] = 1;
 		}
