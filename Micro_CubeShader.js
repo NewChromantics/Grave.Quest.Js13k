@@ -17,7 +17,7 @@ uniform sampler2D OldPositionsTexture;
 vec3 GetLocalPosition(int v)
 {
 	v*=3;
-	int x = ivec4(0x3695a00b,0x3706d82f,0x26484ed2,0xbfe9)[v/30]>>v%30;
+	int x = ivec4(915775499,923195439,642272978,49129)[v/30]>>v%30;
 	return sign(vec3(x&1,x&2,x&4));
 }
 #else
@@ -26,6 +26,7 @@ vec3 GetLocalPosition(int v)
 vec3 GetLocalPosition(int CubeVertexIndex)
 {
 	int CubeVertexIndexComponent = CubeVertexIndex*3;
+	//	gr: integers are shorter than hex! https://twitter.com/SN74HC00/status/1559481497349914624
 	ivec4 VertexPositions30s = ivec4(0x3695a00b,0x3706d82f,0x26484ed2,0xbfe9);
 	int ChunkIndex = int( CubeVertexIndexComponent / 30 );
 	int BitIndex = CubeVertexIndexComponent % 30;
