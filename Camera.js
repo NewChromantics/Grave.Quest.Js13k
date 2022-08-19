@@ -3,18 +3,13 @@ export function Subtract3(a,b)
 	return [ a[0]-b[0], a[1]-b[1], a[2]-b[2] ];
 }
 
-export function LengthSq3(a,b=[0,0,0])
-{
-	let dx = a[0] - b[0];
-	let dy = a[1] - b[1];
-	let dz = a[2] - b[2];
-	let LengthSq = dx*dx + dy*dy + dz*dz;
-	return LengthSq;
-}
 
 export function Length3(a)
 {
-	let LengthSq = LengthSq3( [0,0,0], a );
+	let dx = a[0];
+	let dy = a[1];
+	let dz = a[2];
+	let LengthSq = dx*dx + dy*dy + dz*dz;
 	let Len = Math.sqrt( LengthSq );
 	return Len;
 }
@@ -24,11 +19,11 @@ export function Normalise3(a,NormalLength=1)
 	Length *= 1 / NormalLength;
 	return [ a[0]/Length, a[1]/Length, a[2]/Length ];
 }
-export function Cross3(a,b)
+export function Cross3(a0,a1,a2,b0,b1,b2)
 {
-	let x = a[1] * b[2] - a[2] * b[1];
-	let y = a[2] * b[0] - a[0] * b[2];
-	let z = a[0] * b[1] - a[1] * b[0];
+	let x = a1 * b2 - a2 * b1;
+	let y = a2 * b0 - a0 * b2;
+	let z = a0 * b1 - a1 * b0;
 	return [x,y,z];
 }
 
@@ -44,35 +39,9 @@ export function RadToDeg(Radians)
 
 export function MatrixInverse4x4(Matrix)
 {
-	let m = Matrix;
-	let r = [];
-	
-	r[0] = m[5]*m[10]*m[15] - m[5]*m[14]*m[11] - m[6]*m[9]*m[15] + m[6]*m[13]*m[11] + m[7]*m[9]*m[14] - m[7]*m[13]*m[10];
-	r[1] = -m[1]*m[10]*m[15] + m[1]*m[14]*m[11] + m[2]*m[9]*m[15] - m[2]*m[13]*m[11] - m[3]*m[9]*m[14] + m[3]*m[13]*m[10];
-	r[2] = m[1]*m[6]*m[15] - m[1]*m[14]*m[7] - m[2]*m[5]*m[15] + m[2]*m[13]*m[7] + m[3]*m[5]*m[14] - m[3]*m[13]*m[6];
-	r[3] = -m[1]*m[6]*m[11] + m[1]*m[10]*m[7] + m[2]*m[5]*m[11] - m[2]*m[9]*m[7] - m[3]*m[5]*m[10] + m[3]*m[9]*m[6];
-	
-	r[4] = -m[4]*m[10]*m[15] + m[4]*m[14]*m[11] + m[6]*m[8]*m[15] - m[6]*m[12]*m[11] - m[7]*m[8]*m[14] + m[7]*m[12]*m[10];
-	r[5] = m[0]*m[10]*m[15] - m[0]*m[14]*m[11] - m[2]*m[8]*m[15] + m[2]*m[12]*m[11] + m[3]*m[8]*m[14] - m[3]*m[12]*m[10];
-	r[6] = -m[0]*m[6]*m[15] + m[0]*m[14]*m[7] + m[2]*m[4]*m[15] - m[2]*m[12]*m[7] - m[3]*m[4]*m[14] + m[3]*m[12]*m[6];
-	r[7] = m[0]*m[6]*m[11] - m[0]*m[10]*m[7] - m[2]*m[4]*m[11] + m[2]*m[8]*m[7] + m[3]*m[4]*m[10] - m[3]*m[8]*m[6];
-	
-	r[8] = m[4]*m[9]*m[15] - m[4]*m[13]*m[11] - m[5]*m[8]*m[15] + m[5]*m[12]*m[11] + m[7]*m[8]*m[13] - m[7]*m[12]*m[9];
-	r[9] = -m[0]*m[9]*m[15] + m[0]*m[13]*m[11] + m[1]*m[8]*m[15] - m[1]*m[12]*m[11] - m[3]*m[8]*m[13] + m[3]*m[12]*m[9];
-	r[10] = m[0]*m[5]*m[15] - m[0]*m[13]*m[7] - m[1]*m[4]*m[15] + m[1]*m[12]*m[7] + m[3]*m[4]*m[13] - m[3]*m[12]*m[5];
-	r[11] = -m[0]*m[5]*m[11] + m[0]*m[9]*m[7] + m[1]*m[4]*m[11] - m[1]*m[8]*m[7] - m[3]*m[4]*m[9] + m[3]*m[8]*m[5];
-	
-	r[12] = -m[4]*m[9]*m[14] + m[4]*m[13]*m[10] + m[5]*m[8]*m[14] - m[5]*m[12]*m[10] - m[6]*m[8]*m[13] + m[6]*m[12]*m[9];
-	r[13] = m[0]*m[9]*m[14] - m[0]*m[13]*m[10] - m[1]*m[8]*m[14] + m[1]*m[12]*m[10] + m[2]*m[8]*m[13] - m[2]*m[12]*m[9];
-	r[14] = -m[0]*m[5]*m[14] + m[0]*m[13]*m[6] + m[1]*m[4]*m[14] - m[1]*m[12]*m[6] - m[2]*m[4]*m[13] + m[2]*m[12]*m[5];
-	r[15] = m[0]*m[5]*m[10] - m[0]*m[9]*m[6] - m[1]*m[4]*m[10] + m[1]*m[8]*m[6] + m[2]*m[4]*m[9] - m[2]*m[8]*m[5];
-	
-	let det = m[0]*r[0] + m[1]*r[4] + m[2]*r[8] + m[3]*r[12];
-	for ( let i=0;	i<16;	i++ )
-		r[i] /= det;
-	
-	return r;
-
+	let mat = new DOMMatrix(Matrix);
+	mat.invertSelf();
+	return Array.from(mat.toFloat32Array());
 }
 
 export function CreateLookAtRotationMatrix(eye,up,center)
@@ -80,10 +49,10 @@ export function CreateLookAtRotationMatrix(eye,up,center)
 	let z = Subtract3( center, eye );
 	z = Normalise3( z );
 	
-	let x = Cross3( up, z );
+	let x = Cross3( ...up, ...z );
 	x = Normalise3( x );
 	
-	let y = Cross3( z,x );
+	let y = Cross3( ...z,...x );
 	y = Normalise3( y );
 	
 	let tx = 0;
@@ -106,17 +75,14 @@ export function CreateTranslationMatrix(x,y,z,w=1)
 	return [ 1,0,0,0,	0,1,0,0,	0,0,1,0,	x,y,z,w	];
 }
 
-export function GetMatrixTranslation(Matrix,DivW=false)
+export function GetMatrixTranslation(Matrix)
 {
 	//	do we need to /w here?
 	let xyz = Matrix.slice(12,12+3);
-	if ( DivW )
-	{
-		let w = Matrix[15];
-		xyz[0] /= w;
-		xyz[1] /= w;
-		xyz[2] /= w;
-	}
+	let w = Matrix[15];
+	xyz[0] /= w;
+	xyz[1] /= w;
+	xyz[2] /= w;
 	return xyz;
 }
 export function SetMatrixTranslation(Matrix,x,y,z,w=1)
@@ -132,7 +98,7 @@ export function TransformPosition(Position,Transform)
 {
 	const PosMatrix = CreateTranslationMatrix(...Position);
 	const TransMatrix = MatrixMultiply4x4(Transform,PosMatrix);
-	const TransPos = GetMatrixTranslation(TransMatrix,true);
+	const TransPos = GetMatrixTranslation(TransMatrix);
 	return TransPos;
 }
 
@@ -141,60 +107,17 @@ export function TransformPosition(Position,Transform)
 //	gr: but that doesn't seem to be riht
 export function MatrixMultiply4x4(a,b)
 {
-	var a00 = a[0],
-	a01 = a[1],
-	a02 = a[2],
-	a03 = a[3];
-	var a10 = a[4],
-	a11 = a[5],
-	a12 = a[6],
-	a13 = a[7];
-	var a20 = a[8],
-	a21 = a[9],
-	a22 = a[10],
-	a23 = a[11];
-	var a30 = a[12],
-	a31 = a[13],
-	a32 = a[14],
-	a33 = a[15];
-	
-	// Cache only the current line of the second matrix
-	var b0 = b[0],
-	b1 = b[1],
-	b2 = b[2],
-	b3 = b[3];
-
-	let out = [];
-	out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-	out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-	out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-	out[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-	
-	b0 = b[4];b1 = b[5];b2 = b[6];b3 = b[7];
-	out[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-	out[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-	out[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-	out[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-	
-	b0 = b[8];b1 = b[9];b2 = b[10];b3 = b[11];
-	out[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-	out[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-	out[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-	out[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-	
-	b0 = b[12];b1 = b[13];b2 = b[14];b3 = b[15];
-	out[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-	out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-	out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-	out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-	return out;
+	a = new DOMMatrix(a);
+	b = new DOMMatrix(b);
+	let mat = a.multiply(b);
+	return Array.from(mat.toFloat32Array());
 }
 
 
 
 export class Camera
 {
-	constructor(CopyCamera)
+	constructor()
 	{
 		this.FovVertical = 45;
 		this.ZForwardIsNegative = false;
@@ -214,128 +137,8 @@ export class Camera
 		//		maybe this shouldn't be here any more and provided with the viewrect
 		this.FocalCenterOffset = [0,0];
 		this.FocalCenter = false;	//	old api, null to catch anyone setting it
-
-		if ( CopyCamera instanceof Camera )
-		{
-			this.FovVertical = CopyCamera.FovVertical;
-			this.Position = CopyCamera.Position.slice();
-			this.LookAt = CopyCamera.LookAt.slice();
-			this.NearDistance = CopyCamera.NearDistance;
-			this.FarDistance = CopyCamera.FarDistance;
-			this.Rotation4x4 = CopyCamera.Rotation4x4;
-		}
 	}
 	
-	
-	FieldOfViewToFocalLengths(FovHorz,FovVert)
-	{
-		let fx = 363.30 * 2;
-		let s = 0;
-		let fy = 364.19 * 2;
-		let cx = 400;
-		let cy = 400;
-		
-		//	lengths should be in pixels?
-		let Width = 1;
-		let Height = 1;
-		let FocalLengthHorz = Width / Math.tan( DegToRad(FovHorz) / 2);
-		let FocalLengthVert = Height / Math.tan( DegToRad(FovVert) / 2);
-		Pop.Debug('FocalLengthVert',FocalLengthVert,'FocalLengthHorz',FocalLengthHorz);
-		//^^^ FocalLengthHorz=1.816739344621
-		
-		//	needs to convert to -1...1?
-		//	or 0..1
-		//	https://strawlab.org/2011/11/05/augmented-reality-with-OpenGL
-		let ImW = 800;
-		let ImH = 800;
-		let x0 = 0;	//	image center in...opengl?
-		let y0 = 0;	//	image center in...opengl?
-		FocalLengthHorz = 2 * fx / ImW;	//	2*K00/width
-		let GL_s = -2 * s /ImW;			//	-2*K01/width
-		let LensCenterX = (ImW - 2 * cx + 2 * x0)/ImW;	//	(width - 2*K02 + 2*x0)/width
-		//	0
-		let Flip = 1;	//	-1 to flip
-		FocalLengthVert = (Flip*2) * fy / ImH;	//	-2*K11/height
-		let LensCenterY = ((ImH*Flip) - 2 * (Flip*cy) + 2*y0)/ImH;	//	(height - 2*K12 + 2*y0)/height
-		Pop.Debug('FocalLengthVert',FocalLengthVert,'FocalLengthHorz',FocalLengthHorz);
-		
-		let Focal = {};
-		Focal.fx = FocalLengthHorz;
-		Focal.fy = FocalLengthVert;
-		Focal.cx = LensCenterX;
-		Focal.cy = LensCenterY;
-		return Focal;
-	}
-	
-	FocalLengthsToFieldOfView(fx,fy,cx,cy,ImageWidth,ImageHeight)
-	{
-		let FovHorizontal = RadToDeg( 2 * Math.atan( ImageWidth / (2*fx) ) );
-		let FovVertical = RadToDeg( 2 * Math.atan( ImageHeight / (2*fy) ) );
-		let Fov = {};
-		Fov.Horz = FovHorizontal;
-		Fov.Vert = FovVertical;
-		return Fov;
-	}
-	
-	GetFieldOfView(ViewRect)
-	{
-		let Fov = {};
-		let Aspect = ViewRect[2] / ViewRect[3];
-		Fov.Horz = this.FovVertical / Aspect;
-		Fov.Vert = this.FovVertical;
-		return Fov;
-	}
-	
-	GetPixelFocalLengths(ViewRect)
-	{
-		/*
-		let UseFov = true;
-		
-		if ( UseFov )
-		{
-			let Fov = this.GetFieldOfView();
-		}
-		*/
-		let Focal = {};
-		//	from calibration on 800x800 image
-		Focal.fx = 363.30 * 2;
-		Focal.fy = 364.19 * 2;
-		Focal.cx = 400;
-		Focal.cy = 400;
-		Focal.s = 0;
-		
-		return Focal;
-	}
-	
-	PixelToOpenglFocalLengths(PixelFocals,ImageSize)
-	{
-		//	https://strawlab.org/2011/11/05/augmented-reality-with-OpenGL
-		//	convert pixel focal projection to opengl projection frustum
-		let s = 0;
-		let ImW = ImageSize[0];
-		let ImH = ImageSize[1];
-		
-		
-		let x0 = 0;	//	image center in...opengl?
-		let y0 = 0;	//	image center in...opengl?
-		let FocalLengthHorz = 2 * PixelFocals.fx / ImW;	//	2*K00/width
-		let GL_s = -2 * s /ImW;			//	-2*K01/width
-		let LensCenterX = (ImW - 2 * PixelFocals.cx + 2 * x0)/ImW;	//	(width - 2*K02 + 2*x0)/width
-		//	0
-		let Flip = 1;	//	-1 to flip
-		let FocalLengthVert = (Flip*2) * PixelFocals.fy / ImH;	//	-2*K11/height
-		let LensCenterY = ((ImH*Flip) - 2 * (Flip*PixelFocals.cy) + 2*y0)/ImH;	//	(height - 2*K12 + 2*y0)/height
-		//Pop.Debug('FocalLengthVert',FocalLengthVert,'FocalLengthHorz',FocalLengthHorz);
-		
-		const OpenglFocal = {};
-		OpenglFocal.fx = FocalLengthHorz;
-		OpenglFocal.fy = FocalLengthVert;
-		OpenglFocal.cx = LensCenterX;
-		OpenglFocal.cy = LensCenterY;
-		OpenglFocal.s = GL_s;
-		
-		return OpenglFocal;
-	}
 	
 	GetOpenglFocalLengths(ViewRect)
 	{
@@ -356,31 +159,6 @@ export class Camera
 		return OpenglFocal;
 	}
 	
-	
-	makePerspective( left, right, top, bottom, near, far ) 
-	{
-		if ( far === undefined ) {
-
-			console.warn( 'THREE.Matrix4: .makePerspective() has been redefined and has a new signature. Please check the docs.' );
-
-		}
-
-		const te = [];
-		const x = 2 * near / ( right - left );
-		const y = 2 * near / ( top - bottom );
-
-		const a = ( right + left ) / ( right - left );
-		const b = ( top + bottom ) / ( top - bottom );
-		const c = - ( far + near ) / ( far - near );
-		const d = - 2 * far * near / ( far - near );
-
-		te[ 0 ] = x;	te[ 4 ] = 0;	te[ 8 ] = a;	te[ 12 ] = 0;
-		te[ 1 ] = 0;	te[ 5 ] = y;	te[ 9 ] = b;	te[ 13 ] = 0;
-		te[ 2 ] = 0;	te[ 6 ] = 0;	te[ 10 ] = c;	te[ 14 ] = d;
-		te[ 3 ] = 0;	te[ 7 ] = 0;	te[ 11 ] = - 1;	te[ 15 ] = 0;
-
-		return te;
-	}
 	
 	//	GetOpencvProjectionMatrix but 4x4 with z correction for near/far
 	//	rename to CameraToScreen/View
@@ -433,13 +211,6 @@ export class Camera
 		Matrix[15] = 0;
 		
 		return Matrix;
-	}
-
-	GetScreenToCameraTransform(ViewRect)
-	{
-		const CameraToScreen = this.GetProjectionMatrix(ViewRect);
-		const ScreenToCamera = MatrixInverse4x4( CameraToScreen );
-		return ScreenToCamera;
 	}
 	
 	
@@ -500,16 +271,6 @@ export class Camera
 		return Matrix;
 	}
 	
-	SetLocalToWorldTransform(Transform4x4)
-	{
-		if ( Transform4x4.length != (4*4) )
-			throw `SetLocalToWorldTransform(${Transform4x4}) expecting 16-element array`;
-			
-		this.Position = GetMatrixTranslation(Transform4x4);
-		this.Rotation4x4 = Transform4x4.slice();
-		SetMatrixTranslation( this.Rotation4x4, 0,0,0,1 );
-	}
-	
 	GetLocalToWorldMatrix()
 	{
 		let WorldToCameraMatrix = this.GetWorldToCameraMatrix();
@@ -521,29 +282,7 @@ export class Camera
 		
 		return Matrix;
 	}
-	
-	GetWorldToFrustumTransform(ViewRect=[-1,-1,1,1])
-	{
-		const CameraToFrustum = this.GetProjectionMatrix( ViewRect );
-		const WorldToCamera = this.GetWorldToCameraMatrix();
-		const WorldToFrustum = MatrixMultiply4x4( CameraToFrustum, WorldToCamera );
-		return WorldToFrustum;
-	}
-	
-	//	this gets a transform, which when applied to a cube of -1..1,-1..1,-1..1
-	//	will skew the cube into a representation of the view frustum in world space
-	GetLocalToWorldFrustumTransformMatrix(ViewRect=[-1,-1,1,1])
-	{
-		//	todo: correct viewrect with aspect ratio of viewport
-		//		maybe change input to Viewport to match GetProjection matrix?
-		let CameraToScreen = this.GetProjectionMatrix( ViewRect );
-		let ScreenToCamera = MatrixInverse4x4( CameraToScreen );
-		//	put into world space
-		let LocalToWorld = this.GetLocalToWorldMatrix();
-		let ScreenToWorld = MatrixMultiply4x4( LocalToWorld, ScreenToCamera );
-		return ScreenToWorld;
-	}
-	
+		
 	GetUp()
 	{
 		return this.Up.slice();
@@ -568,24 +307,7 @@ export class Camera
 			z = Normalise3( z );
 		return z;
 	}
-	
-	GetBackward(Normalised=true)
-	{
-		const Forward = this.GetForward(Normalised);
-		const Backward = Multiply3(Forward,[-1,-1,-1]);
-		return Backward;
-	}
-	
-	GetRight()
-	{
-		const up = this.GetUp();
-		const z = this.GetForward();
-		let x = Cross3( up, z );
-		x = Normalise3( x );
-		return x;
-	}
-	
-	
+		
 	MoveCameraAndLookAt(Delta)
 	{
 		this.Position[0] += Delta[0];
@@ -596,87 +318,6 @@ export class Camera
 		this.LookAt[2] += Delta[2];
 	}
 	
-	GetPitchYawRollDistance()
-	{
-		//	dir from lookat to position (orbit, not first person)
-		let Dir = this.GetBackward(false);
-		let Distance = Length3( Dir );
-		//Pop.Debug("Distance = ",Distance,Dir);
-		Dir = Normalise3( Dir );
-		
-		let Yaw = RadToDeg( Math.atan2( Dir[0], Dir[2] ) );
-		let Pitch = RadToDeg( Math.asin(-Dir[1]) );
-		let Roll = 0;
-		
-		return [Pitch,Yaw,Roll,Distance];
-	}
-	
-	SetOrbit(Pitch,Yaw,Roll,Distance)
-	{
-		//	don't allow zero or negative distance
-		//	need some arbritry epsilon, so use the clipping distance
-		Distance = Math.max( this.NearDistance, Distance ); 
-		
-		let Pitchr = radians(Pitch);
-		let Yawr = radians(Yaw);
-		//Pop.Debug("SetOrbit()", ...arguments );
-		//Pop.Debug("Pitch = "+Pitch);
-		
-		let Deltax = Math.sin(Yawr) * Math.cos(Pitchr);
-		let Deltay = -Math.sin(Pitchr);
-		let Deltaz = Math.cos(Yawr) * Math.cos(Pitchr);
-		Deltax *= Distance;
-		Deltay *= Distance;
-		Deltaz *= Distance;
-		
-		//Pop.Debug( "SetOrbit deltas", Deltax, Deltay, Deltaz );
-		this.Position[0] = this.LookAt[0] + Deltax;
-		this.Position[1] = this.LookAt[1] + Deltay;
-		this.Position[2] = this.LookAt[2] + Deltaz;
-		
-	}
-	
-	//	move only position, not lookat, clamps zoom in
-	OnCameraZoom(Delta)
-	{
-		const Pyrd = this.GetPitchYawRollDistance();
-		Pyrd[3] -= Delta;
-		this.SetOrbit( ...Pyrd );
-		
-		//	prevent an orbit from using old distance
-		this.Last_OrbitPos = null;
-	}
-	
-	OnCameraOrbit(x,y,z,FirstClick)
-	{
-		//	remap input from xy to yaw, pitch
-		let yxz = [y,x,z];
-		x = yxz[0];
-		y = yxz[1];
-		z = yxz[2];
-		
-		if ( FirstClick || !this.Last_OrbitPos )
-		{
-			this.Start_OrbitPyrd = this.GetPitchYawRollDistance();
-			//Pop.Debug("this.Start_OrbitPyrd",this.Start_OrbitPyrd);
-			this.Last_OrbitPos = [x,y,z];
-		}
-		
-		let Deltax = this.Last_OrbitPos[0] - x;
-		let Deltay = this.Last_OrbitPos[1] - y;
-		let Deltaz = this.Last_OrbitPos[2] - z;
-	
-		Deltax *= 0.1;
-		Deltay *= 0.1;
-		Deltaz *= 0.1;
-	
-		let NewPitch = this.Start_OrbitPyrd[0] + Deltax;
-		let NewYaw = this.Start_OrbitPyrd[1] + Deltay;
-		let NewRoll = this.Start_OrbitPyrd[2] + Deltaz;
-		let NewDistance = this.Start_OrbitPyrd[3];
-		
-		this.SetOrbit( NewPitch, NewYaw, NewRoll, NewDistance );
-	}
 	
 	//	opposite of GetOrbit
 	GetLookAtRotation()
@@ -697,19 +338,14 @@ export class Camera
 	//	opposite of SetOrbit
 	SetLookAtRotation(Pitch,Yaw,Roll,Distance)
 	{
-		let Pitchr = radians(Pitch);
-		let Yawr = radians(Yaw);
-		//Pop.Debug("SetOrbit()", ...arguments );
-		//Pop.Debug("Pitch = "+Pitch);
-		
+		let Pitchr = DegToRad(Pitch);
+		let Yawr = DegToRad(Yaw);
 		let Deltax = Math.sin(Yawr) * Math.cos(Pitchr);
 		let Deltay = -Math.sin(Pitchr);
 		let Deltaz = Math.cos(Yawr) * Math.cos(Pitchr);
 		Deltax *= Distance;
 		Deltay *= Distance;
 		Deltaz *= Distance;
-		
-		//Pop.Debug( "SetOrbit deltas", Deltax, Deltay, Deltaz );
 		this.LookAt[0] = this.Position[0] + Deltax;
 		this.LookAt[1] = this.Position[1] + Deltay;
 		this.LookAt[2] = this.Position[2] + Deltaz;
@@ -746,109 +382,6 @@ export class Camera
 		
 		this.SetLookAtRotation( NewPitch, NewYaw, NewRoll, NewDistance );
 	}
-	
-
-	
-	OnCameraPan(x,y,z,FirstClick)
-	{
-		if ( FirstClick )
-			this.LastPos_PanPos = [x,y,z];
-		//Pop.Debug("OnCameraPan", ...arguments, JSON.stringify(this));
-
-		let Deltax = this.LastPos_PanPos[0] - x;
-		let Deltay = this.LastPos_PanPos[1] - y;
-		let Deltaz = this.LastPos_PanPos[2] - z;
-		Deltax = Deltax * 0.01;
-		Deltay = Deltay * -0.01;
-		Deltaz = Deltaz * 0.01;
-		let Delta = [ Deltax, Deltay, Deltaz ];
-		this.MoveCameraAndLookAt( Delta );
-		
-		this.LastPos_PanPos = [x,y,z];
-	}
-	
-	OnCameraPanLocal(x,y,z,FirstClick)
-	{
-		if ( FirstClick || !this.LastPos_PanLocalPos )
-			this.LastPos_PanLocalPos = [x,y,z];
-	
-		let Deltax = this.LastPos_PanLocalPos[0] - x;
-		let Deltay = this.LastPos_PanLocalPos[1] - y;
-		let Deltaz = this.LastPos_PanLocalPos[2] - z;
-		Deltax *= -0.01;
-		Deltay *= -0.01;
-		Deltaz *= -0.01;
-
-		let Right3 = this.GetRight();
-		Right3 = Multiply3( Right3, [Deltax,Deltax,Deltax] );
-		this.MoveCameraAndLookAt( Right3 );
-
-		let Up3 = this.GetUp();
-		Up3 = Multiply3( Up3, [Deltay,Deltay,Deltay] );
-		this.MoveCameraAndLookAt( Up3 );
-
-		let Forward3 = this.GetForward();
-		Forward3 = Multiply3( Forward3, [Deltaz,Deltaz,Deltaz] );
-		this.MoveCameraAndLookAt( Forward3 );
-
-		this.LastPos_PanLocalPos = [x,y,z];
-	}
-
-	//	maybe rename to GetWorldRay
-	GetScreenRay(u,v,ScreenRect,RayDistance=null)
-	{
-		let Aspect = ScreenRect[2] / ScreenRect[3];
-
-		//let x = lerp( -1, 1, u );
-		//let y = lerp( 1, -1, v );
-		//const ViewRect = ScreenRect;
-
-		let x = lerp( -Aspect, Aspect, u );
-		let y = lerp( 1, -1, v );
-		const ViewRect = [0,0,1,1];
-		
-		const Camera = this;
-		
-		const RayNear = this.NearDistance;
-		const RayFar = RayDistance || this.FarDistance;
-		
-		let CameraToScreenTransform = Camera.GetProjectionMatrix( ViewRect );
-		let ScreenToCameraTransform = MatrixInverse4x4( CameraToScreenTransform );
-		
-		let StartMatrix = CreateTranslationMatrix( x, y, RayNear );
-		let EndMatrix = CreateTranslationMatrix( x, y, RayFar );
-		StartMatrix = MatrixMultiply4x4( ScreenToCameraTransform, StartMatrix );
-		EndMatrix = MatrixMultiply4x4( ScreenToCameraTransform, EndMatrix );
-		
-		StartMatrix = MatrixMultiply4x4( Camera.GetLocalToWorldMatrix(), StartMatrix );
-		EndMatrix = MatrixMultiply4x4( Camera.GetLocalToWorldMatrix(), EndMatrix );
-
-		const Ray = {};
-		
-		//	gr: these positions are wrong, they're scaled completley wrong
-		//		maybe theyre scaled in camera's z (near/far), but... im pretty sure they should be in world space...
-		Ray.Start = GetMatrixTranslation( StartMatrix, true );
-		Ray.End = GetMatrixTranslation( EndMatrix, true );
-		//	...so we're gonna rescale for now
-		
-		//	ray dir seems to be right, so get new world positions from that
-		Ray.Position = Camera.Position.slice();
-		
-		//	gr: this ray is BACKWARDS
-		//		but this is working for world-space math checks
-		//		I think the Z dir is backwards in the projection hence why it renders correctly, but maths is backwards
-		//		the raymarch dir is also backwards, which matches this backwards
-		Ray.Direction = Normalise3( Subtract3( Ray.Start, Ray.End ) );
-		//Ray.Position = Ray.Start;
-		
-		Ray.Start = GetRayPositionAtTime( Ray.Position, Ray.Direction, RayNear );
-		Ray.End = GetRayPositionAtTime( Ray.Position, Ray.Direction, RayFar );
-		Ray.Position = Ray.Start;
-		
-		return Ray;
-	}
-	
-	//Pop.Debug("initial pitch/yaw/roll/distance",this.GetPitchYawRollDistance());
 }
 
 export default Camera;
