@@ -154,6 +154,13 @@ export default class Camera
 		return WorldToCameraMatrix.inverse();
 	}
 	
+	GetWorldTransform(LocalOffset)
+	{
+		let LocalToWorld = this.GetLocalToWorldMatrix();
+		let Trans = LocalToWorld.translate(...LocalOffset);
+		return Trans;
+	}
+	
 	//	get forward vector in world space
 	GetForward(Normalised=true)
 	{

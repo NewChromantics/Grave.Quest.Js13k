@@ -18,8 +18,9 @@ out vec4 Colour;
 in vec2 uv;
 uniform sampler2D OldPositions;
 uniform sampler2D OldVelocitys;
-uniform vec4 ProjectileVel;
-uniform vec4 ProjectilePos;
+#define MAX_PROJECTILES	50
+uniform vec4 ProjectileVel[MAX_PROJECTILES];
+uniform vec4 ProjectilePos[MAX_PROJECTILES];
 #define FragIndex	(int(gl_FragCoord.x) + int(gl_FragCoord.y)*128)
 
 float FloorY = -20.0;
@@ -39,8 +40,8 @@ void main()
 	xyz.y = max( xyz.y, FloorY );
 
 	//	new projectile data
-	if ( FragIndex == 0 && ProjectilePos.w > 0.0 )
-		xyz = ProjectilePos;
+	if ( FragIndex < MAX_PROJECTILES && ProjectilePos[FragIndex].w > 0.0 )
+		xyz = ProjectilePos[FragIndex];
 
 	Colour = xyz;
 }

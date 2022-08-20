@@ -1,15 +1,14 @@
-import Camera_t from './Camera.js'
+
 import * as CubeShader from './Micro_CubeShader.js'
 import * as PhysicsPositionShader from './Micro_PhysicsPositionShader.js'
 import * as PhysicsVelocityShader from './Micro_PhysicsVelocityShader.js'
 
-let Camera = new Camera_t();
-Camera.Position = [ 0,0,10 ];
-Camera.LookAt = [ 0,0,0 ];
-Camera.FovVertical = 45;
+import DesktopXr from './DesktopXr.js'
+
+function GetTime(){	return Math.floor(performance.now());	}
+
 let rc;
 let gl;
-let TickCount=0;
 
 const OLD=0;
 const NEW=1;
@@ -18,47 +17,17 @@ let VelocityTextures=[];
 let TextureTarget;
 
 //	set w to 1 when new data
-let ProjectilePos=[0.5,-2,-4,1];
-let ProjectileVel=[0,4,-15,1];
-let InputQueue = [];
+let MAX_PROJECTILES	= 50;
+let ProjectileIndex = 0;
+let ProjectilePos = new Array(MAX_PROJECTILES).fill(0).map(x=>[0,0,0,0]);
+let ProjectileVel = new Array(MAX_PROJECTILES).fill(0).map(x=>[0,0,0,0]);
 let WorldSize = 200;
 let WorldNear = -20;
 
-function OnMouseDown()
-{
-	InputQueue.push('Click');
-}
+let Desktop;
+let FireRepeatMs = 40;
 
-let MouseLastPos = null;
-function OnMouseMove(Event)
-{
-	let Rect = Event.currentTarget.getBoundingClientRect();
-	let ClientX = Event.pageX || Event.clientX;
-	let ClientY = Event.pageY || Event.clientY;
-	let x = ClientX - Rect.left;
-	let y = ClientY - Rect.top;
-	
-	let First = MouseLastPos==null;
-	x *= 2;
-	y *= 1;
-	Camera.OnCameraFirstPersonRotate( x, y, 0, First );
-	
-	MouseLastPos = [x,y];
-}
 
-function Multiply3(a,b)
-{
-	return [ a[0]*b[0], a[1]*b[1], a[2]*b[2] ];
-}
-
-function OnMouseWheel(Event)
-{
-	let DeltaScale = -0.6;
-	let Deltaz = Event.deltaY * DeltaScale;
-	let Forward3 = Camera.GetForward();
-	Forward3 = Multiply3( Forward3, [Deltaz,Deltaz,Deltaz] );
-	Camera.MovePositionAndLookAt( Forward3 );
-}
 
 function CompileShader(Type,Source)
 {
@@ -121,10 +90,7 @@ class RenderContext_t
 export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
 	rc = new RenderContext_t(Canvas);
-	Canvas.addEventListener('mousedown',OnMouseDown,true);
-	Canvas.addEventListener('mousemove',OnMouseMove,true);
-	Canvas.addEventListener('wheel',OnMouseWheel,true);
-
+	Desktop = new DesktopXr(Canvas);
 	
 	AllocTextures(PositionTextures,[-WorldSize,30,WorldSize-WorldSize,0],[WorldSize,30,-WorldNear-WorldSize-WorldSize,1]);
 	AllocTextures(VelocityTextures,[0,0,0,0],[0,0,0,0]);
@@ -143,48 +109,77 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		
 		//RenderPhysics([Canvas.width,Canvas.height]);
 		PostFrame();
-		TickCount++;
-		
 	}
 	Tick();
 	return 'Bootup finished';
 }
 
-function Set3(Source,Target,Scale=1)
+
+
+let WeaponLastFired = {};	//	[Input] = FiredTime
+
+function TransformPoint(Transform,x,y,z)
 {
-	Target[0] = Source[0] * Scale;
-	Target[1] = Source[1] * Scale;
-	Target[2] = Source[2] * Scale;
+	let xyz = Transform.transformPoint(new DOMPoint(x,y,z));
+	return [xyz.x,xyz.y,xyz.z];
+}
+
+function Set(Target,x,y,z,w)
+{
+	Target[0] = x;
+	Target[1] = y;
+	Target[2] = z;
+	Target[3] = w;
+}
+
+
+function FireWeapon(Name,Transform)
+{
+	WeaponLastFired[Name] = GetTime();
+	
+	let Pos = TransformPoint(Transform,0,0,0);
+	let Fwd = TransformPoint(Transform,0,0,20);
+	let Vel = Fwd.map( (v,i) => v-Pos[i] );
+	Vel[1] += 6;
+	
+	Set( ProjectilePos[ProjectileIndex], ...Pos, 1 );
+	Set( ProjectileVel[ProjectileIndex], ...Vel, 1 );
+	ProjectileIndex = (ProjectileIndex+1) % MAX_PROJECTILES;
+}
+
+function UpdateWeapon(Name,State)
+{
+	//	update gun pos
+	//	update firing
+	if ( !State.Down )
+		return;
+	let TimeDiff = GetTime() - (WeaponLastFired[Name]||0);
+	console.log(`TimeDiff=${TimeDiff}`);
+	while ( TimeDiff > FireRepeatMs )
+	{
+		TimeDiff -= FireRepeatMs;
+		FireWeapon( Name, State.Transform );
+		console.log("Fire");
+		break;
+	}
 }
 
 function Update()
 {
-	//	execute input queue
-	while ( InputQueue.length )
-	{
-		let Input = InputQueue.shift();
-		if ( Input == 'Click' )
-		{
-			let Forward = Camera.GetForward();
-			Set3( Forward, ProjectileVel, 20 );
-			Set3( Camera.Position, ProjectilePos );
-			ProjectilePos[0] += Forward[0];
-			ProjectilePos[1] += Forward[1];
-			ProjectilePos[1] -= 15;
-			ProjectilePos[2] += Forward[2];
-			ProjectileVel[1] += 6;
-			
-			ProjectilePos[3] = 1;
-			ProjectileVel[3] = 1;
-		}
-	}
+	let Input = Desktop.GetInput();
+	//	update all the weapons
+	Object.entries(Input).forEach( e=>UpdateWeapon(...e) );
+	
 }
 
 function PostFrame()
 {
-	//	unset new projectile flag
-	ProjectilePos[3] = 0;
-	ProjectileVel[3] = 0;
+	//	unset new projectile flags
+	for ( let i=0;	i<MAX_PROJECTILES;	i++ )
+	{
+		ProjectilePos[i][3] = 0;
+		ProjectileVel[i][3] = 0;
+	}
 }
 
 function InitTextureParams()
@@ -258,7 +253,8 @@ function SetUniformMat4(Program,Name,Value)
 function SetUniformVector(Program,Name,Value)
 {
 	let UniformLocation = gl.getUniformLocation( Program, Name );
-	let f = `uniform${Value.length}fv`;
+	let Length = Math.min( 4, Value.length );
+	let f = `uniform${Length}fv`;
 	gl[f]( UniformLocation, Value );
 }
 
@@ -274,10 +270,11 @@ function SetUniformTexture(Program,Name,TextureIndex,Texture)
 
 function Render(w,h)
 {
+	let Camera = Desktop.Camera;
+	
 	gl.bindFramebuffer( gl.FRAMEBUFFER, null );
 	const Viewport=[0,0,w/h,h/h];
 	gl.viewport(0,0,w,h);
-	gl.clearColor( TickCount%60/60, 0.1, 0.3, 1.0 );
 	gl.clearColor( 0, 0.1, 0.3, 1.0 );
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.disable(gl.CULL_FACE);
@@ -286,20 +283,13 @@ function Render(w,h)
 	const Shader = rc.CubeShader;
 	//	bind shader
 	gl.useProgram( Shader );
-	//	bind geo
-	//	gr: dont use any buffers (binding geo)
-	//		just generate cube vertexes in vertex shader
-	//		with gl_VertexID
-	//	https://gamedev.stackexchange.com/questions/158391/what-are-free-vertex-indices-in-webgl-2-and-how-do-they-relate-to-geometry-sha
-	//		then world positions are from texture
-	
 	let Instances = PositionTextures[NEW].Size[0] * PositionTextures[NEW].Size[1];
 
 	//	set uniforms
 	//const Viewport=[0,0,1,1];
 	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.GetWorldToCameraMatrix());
 	SetUniformMat4(Shader,'CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
-	SetUniformVector(Shader,'TickCount',[TickCount%1000]);
+	SetUniformVector(Shader,'Time',[GetTime()]);
 	
 	//	hardcoded texture slots
 	SetUniformTexture(Shader,'PositionsTexture',0,PositionTextures[NEW]);
@@ -341,7 +331,7 @@ function Blit(ScreenSize,Textures,Shader)
 	//	bind shader
 	gl.useProgram( Shader );
 
-	SetUniformVector( Shader,'TickCount',[TickCount]);
+	SetUniformVector( Shader,'Time',[GetTime()]);
 	if ( Target )
 	{
 		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[OLD]);
@@ -352,8 +342,8 @@ function Blit(ScreenSize,Textures,Shader)
 		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[NEW]);
 		SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[NEW]);
 	}
-	SetUniformVector(Shader,'ProjectilePos',ProjectilePos);
-	SetUniformVector(Shader,'ProjectileVel',ProjectileVel);
+	SetUniformVector(Shader,'ProjectilePos',ProjectilePos.flat(4));
+	SetUniformVector(Shader,'ProjectileVel',ProjectileVel.flat(4));
 
 	gl.drawArrays( gl.TRIANGLE_FAN, 0, 4 );
 }

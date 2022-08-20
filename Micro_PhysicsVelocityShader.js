@@ -7,8 +7,9 @@ out vec4 Colour;
 in vec2 uv;
 uniform sampler2D OldVelocitys;
 uniform sampler2D OldPositions;
-uniform vec4 ProjectileVel;
-uniform vec4 ProjectilePos;
+#define MAX_PROJECTILES	50
+uniform vec4 ProjectileVel[MAX_PROJECTILES];
+uniform vec4 ProjectilePos[MAX_PROJECTILES];
 
 #define FragIndex	(int(gl_FragCoord.x) + (int(gl_FragCoord.y)*128))
 
@@ -29,10 +30,10 @@ void main()
 	vec4 xyz = texture(OldPositions, uv);
 
 	//	new projectile data
-	if ( FragIndex == 0 && ProjectileVel.w > 0.0 )
+	if ( FragIndex < MAX_PROJECTILES && ProjectileVel[FragIndex].w > 0.0 )
 	{
-		Vel = ProjectileVel.xyz;
-		xyz = ProjectilePos;
+		Vel = ProjectileVel[FragIndex].xyz;
+		xyz = ProjectilePos[FragIndex];
 	}
 
 	Vel *= 1.0 - AirDrag;

@@ -5,7 +5,7 @@ out float FragCubeIndex;
 out vec3 FragWorldPosition;
 uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
-uniform float TickCount;
+uniform float Time;
 uniform sampler2D PositionsTexture;
 uniform sampler2D OldPositionsTexture;
 uniform sampler2D VelocitiesTexture;
@@ -125,11 +125,8 @@ vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPositio
 
 void main()
 {
-	//int CubeIndex = int(TickCount);
 	int CubeIndex = gl_VertexID / (3*2*6);
 	int VertexOfCube = gl_VertexID % (3*2*6);
-	//int TriangleIndex = VertexOfCube /3;
-	//int VertexIndex = VertexOfCube % 3;
 	vec3 LocalPosition = GetLocalPosition( VertexOfCube );
 	mat4 LocalToWorldTransform = GetLocalToWorldTransform( CubeIndex, LocalPosition );
 	vec3 WorldPosition = GetWorldPosition( CubeIndex, LocalToWorldTransform, LocalPosition );
@@ -147,6 +144,7 @@ precision highp float;
 out vec4 OutFragColor;
 in float FragCubeIndex;
 uniform sampler2D PositionsTexture;
+#define MAX_PROJECTILES	50
 
 void main()
 {
@@ -154,7 +152,7 @@ void main()
 	float g = mod(FragCubeIndex,100.0)/100.0;
 	float b = mod(FragCubeIndex,7777.0)/7777.0;
 	OutFragColor = vec4(r,g*0.3,b,1);
-	if ( FragCubeIndex == 0.0 )
+	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 		OutFragColor = vec4(0,1,0,1);
 	//OutFragColor = texture(PositionsTexture,vec2(0));
 }
