@@ -19,14 +19,20 @@ let TextureTarget;
 //	set w to 1 when new data
 let MAX_PROJECTILES	= 50;
 let ProjectileIndex = 0;
-let ProjectilePos = new Array(MAX_PROJECTILES).fill(0).map(x=>[0,0,0,0]);
-let ProjectileVel = new Array(MAX_PROJECTILES).fill(0).map(x=>[0,0,0,0]);
+let ProjectilePos = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
+let ProjectileVel = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
 let WorldSize = 200;
 let WorldNear = -20;
 
 let Desktop;
 let FireRepeatMs = 40;
 
+
+//	lerp is random if no time provided
+function lerp(Min,Max,Time=Math.random())
+{
+	return Min + (Max-Min)*Time;
+}
 
 
 function CompileShader(Type,Source)
@@ -118,32 +124,29 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 
 let WeaponLastFired = {};	//	[Input] = FiredTime
 
-function TransformPoint(Transform,x,y,z)
+function TransformPoint(Transform,x,y,z,w=1)
 {
-	let xyz = Transform.transformPoint(new DOMPoint(x,y,z));
-	return [xyz.x,xyz.y,xyz.z];
+	return Transform.transformPoint(new DOMPoint(x,y,z,w));
 }
 
-function Set(Target,x,y,z,w)
+function Set(Target,v)
 {
-	Target[0] = x;
-	Target[1] = y;
-	Target[2] = z;
-	Target[3] = w;
+	Target[0] = v.x;
+	Target[1] = v.y;
+	Target[2] = v.z;
+	Target[3] = 1;
 }
-
 
 function FireWeapon(Name,Transform)
 {
 	WeaponLastFired[Name] = GetTime();
 	
-	let Pos = TransformPoint(Transform,0,0,0);
-	let Fwd = TransformPoint(Transform,0,0,20);
-	let Vel = Fwd.map( (v,i) => v-Pos[i] );
-	Vel[1] += 6;
+	let Pos = TransformPoint( Transform, 0, 0, lerp(0,1) );
+	let Vel = TransformPoint( Transform, lerp(-1,1), lerp(-1,1), lerp(20,30), 0 );
+	Vel.y += lerp(6,8);
 	
-	Set( ProjectilePos[ProjectileIndex], ...Pos, 1 );
-	Set( ProjectileVel[ProjectileIndex], ...Vel, 1 );
+	Set( ProjectilePos[ProjectileIndex], Pos );
+	Set( ProjectileVel[ProjectileIndex], Vel );
 	ProjectileIndex = (ProjectileIndex+1) % MAX_PROJECTILES;
 }
 
@@ -153,15 +156,10 @@ function UpdateWeapon(Name,State)
 	//	update firing
 	if ( !State.Down )
 		return;
+
 	let TimeDiff = GetTime() - (WeaponLastFired[Name]||0);
-	console.log(`TimeDiff=${TimeDiff}`);
-	while ( TimeDiff > FireRepeatMs )
-	{
-		TimeDiff -= FireRepeatMs;
+	if ( TimeDiff > FireRepeatMs )
 		FireWeapon( Name, State.Transform );
-		console.log("Fire");
-		break;
-	}
 }
 
 function Update()
@@ -182,28 +180,14 @@ function PostFrame()
 	}
 }
 
-function InitTextureParams()
+function InitTexture()
 {
-	//const Filter = gl.LINEAR;
-	const Filter = gl.NEAREST;
-	//	non-power of 2 must be clamp to edge
-	const RepeatMode = gl.CLAMP_TO_EDGE;
-	
-	//	wont render without setting min&mag on float (min on u8)
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,Filter);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,Filter);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, RepeatMode);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, RepeatMode);
-
-	//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-	//gl.generateMipmap(gl.TEXTURE_2D);
-	//gl.texSubImage2D( gl.TEXTURE_2D, MipLevel, ...Rect, SourceFormat, SourceType, SubDataValues );
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
-function mix(Min,Max,Time)
-{
-	return Min + (Max-Min)*Time;
-}
 
 function AllocTextures(Textures,InitMin,InitMax)
 {
@@ -212,11 +196,11 @@ function AllocTextures(Textures,InitMin,InitMax)
 	//	todo: this will move to shader for init and maybe then dont need any texture initialisation code
 	function InitPosition(x,Index)
 	{
-		return InitMin.map( (Min,i) => mix(Min,InitMax[i],Math.random()) );
+		return InitMin.map( (Min,i) => lerp(Min,InitMax[i],Math.random()) );
 	}
 	const Width = 128;
 	const Height = 128;
-	let PixelData = new Float32Array(new Array(Width*Height).fill(0).map(InitPosition).flat(2));
+	let PixelData = new Float32Array(new Array(Width*Height).fill().map(InitPosition).flat(2));
 	
 	Textures[NEW] = gl.createTexture();
 	Textures[NEW].Size = [Width,Height];
@@ -233,14 +217,14 @@ function AllocTextures(Textures,InitMin,InitMax)
 	gl.activeTexture( gl.TEXTURE0 );
 	gl.bindTexture( gl.TEXTURE_2D, Textures[NEW] );
 	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, PixelData );
-	InitTextureParams();
+	InitTexture();
 
 	Textures[OLD] = gl.createTexture();
 	Textures[OLD].Size = [Width,Height];
 	gl.activeTexture( gl.TEXTURE0 );
 	gl.bindTexture( gl.TEXTURE_2D, Textures[OLD] );
 	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, null );
-	InitTextureParams();
+	InitTexture();
 }
 
 function SetUniformMat4(Program,Name,Value)
@@ -283,7 +267,6 @@ function Render(w,h)
 	const Shader = rc.CubeShader;
 	//	bind shader
 	gl.useProgram( Shader );
-	let Instances = PositionTextures[NEW].Size[0] * PositionTextures[NEW].Size[1];
 
 	//	set uniforms
 	//const Viewport=[0,0,1,1];
@@ -297,9 +280,9 @@ function Render(w,h)
 	SetUniformTexture(Shader,'VelocitiesTexture',2,VelocityTextures[OLD]);
 
 	
+	let Instances = PositionTextures[NEW].Size[0] * PositionTextures[NEW].Size[1];
 	let TriangleCount = 6*2*3;
-	let IndexCount = TriangleCount;//*3;
-	gl.drawArrays( gl.TRIANGLES, 0, IndexCount*Instances );
+	gl.drawArrays( gl.TRIANGLES, 0, TriangleCount*Instances );
 }
 
 
