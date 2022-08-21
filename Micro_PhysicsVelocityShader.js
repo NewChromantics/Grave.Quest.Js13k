@@ -14,10 +14,10 @@ uniform vec4 ProjectilePos[MAX_PROJECTILES];
 uniform vec4	Random4;
 
 const float AirDrag = 0.01;
-const float FloorDragMin = 0.2;	//	less = more bounce
-const float FloorDragMax = 0.6;	//	less = more bounce
+const float FloorDragMin = 0.3;	//	less = more bounce
+const float FloorDragMax = 0.8;	//	less = more bounce
 const float GravityY = 16.0;
-#define FloorDrag	mix(FloorDragMin,FloorDragMax,Random4.x)
+#define FloorDrag	mix(FloorDragMin,FloorDragMax,RandomVoxel*Random4.x)
 
 
 //	gr: make this bigger based on velocity so sliding projectiles dont hit so much
@@ -80,10 +80,10 @@ vec3 hash32(vec2 p)
 void main()
 {
 	vec4 Vel4 = texelFetch( OldVelocitys, ivec2(gl_FragCoord), 0 );
+	vec4 Pos4 = texelFetch( NewPositions, ivec2(gl_FragCoord), 0 );
 	vec3 Vel = Vel4.xyz;
-	vec3 oldxyz = texelFetch( OldPositions, ivec2(gl_FragCoord), 0 ).xyz;
-	vec3 xyz = texelFetch( NewPositions, ivec2(gl_FragCoord), 0 ).xyz;
-	float RandomVoxel = texelFetch( NewPositions, ivec2(gl_FragCoord), 0 ).w;
+	vec3 xyz = Pos4.xyz;
+	float RandomVoxel = Pos4.w;
 
 	if ( FragIndex < MAX_PROJECTILES )
 	{
@@ -94,7 +94,6 @@ void main()
 	if ( FragIndex < MAX_PROJECTILES && ProjectileVel[FragIndex].w > 0.0 )
 	{
 		Vel = ProjectileVel[FragIndex].xyz;
-		oldxyz = xyz = ProjectilePos[FragIndex].xyz;
 		Type = 1.0;
 	}
 
@@ -122,10 +121,11 @@ void main()
 		if ( !Hit )
 			continue;
 
-		float Randomness = 0.4;
-		vec3 RandDir = mix( vec3(-1), vec3(1), hash32(uv*777.777) );
-		Vel = mix( normalize(ppv), RandDir, Randomness );
-		Vel *= pplen;
+		float Randomness = 0.6;
+		vec3 RandDir = (hash32(uv*777.777)-0.5) * Randomness;
+		Vel = normalize( normalize(ppv) + normalize(RandDir) );
+		Vel *= pplen * 0.4;
+
 		Type = 1.0;
 	}
 
@@ -135,7 +135,7 @@ void main()
 		Vel.y = abs(Vel.y);
 
 		//	stop if tiny bounce
-		if ( length(Vel) < GravityY*1.9*TIMESTEP )
+		if ( length(Vel) < GravityY*6.0*TIMESTEP )
 		{
 			Vel = vec3(0);
 			Type = 0.0;
