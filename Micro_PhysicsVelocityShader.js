@@ -1,4 +1,5 @@
-export {Vert} from './Micro_PhysicsPositionShader.js'
+export {Vert,SpriteMeta} from './Micro_PhysicsPositionShader.js'
+import {SpriteMeta} from './Micro_PhysicsPositionShader.js'
 
 export const Frag =
 `out vec4 Colour;
@@ -6,6 +7,7 @@ in vec2 uv;
 uniform sampler2D OldVelocitys;
 uniform sampler2D OldPositions;
 uniform sampler2D NewPositions;
+uniform sampler2D SpritePositions;
 uniform vec4 ProjectileVel[MAX_PROJECTILES];
 uniform vec4 ProjectilePos[MAX_PROJECTILES];
 
@@ -76,10 +78,20 @@ vec3 hash32(vec2 p)
 }
 
 #define UP		vec3(0,1,0)
-#define MOVING	min(Type,1.0)
+//	static 0
+//	debris 1
+//	spriteN
+#define MOVING	(Type==1.0?1.0:0.0)
+
+uniform float Time;
+${SpriteMeta}
 
 void main()
 {
+	ivec2 Spriteuv = ivec2( gl_FragCoord.x, 0 );
+	//vec4 SpritePos = texelFetch( SpritePositions, Spriteuv, 0 ) * SpriteTrans;
+	vec4 SpritePos = SpriteTrans * texelFetch( SpritePositions, Spriteuv, 0 );
+
 	vec4 Vel4 = texelFetch( OldVelocitys, ivec2(gl_FragCoord), 0 );
 	vec4 Pos4 = texelFetch( NewPositions, ivec2(gl_FragCoord), 0 );
 	vec3 Vel = Vel4.xyz;
@@ -95,6 +107,15 @@ void main()
 
 	Vel *= 1.0 - AirDrag;
 	Vel.y += MOVING * -GravityY * TIMESTEP;
+
+
+	//	spring to sprite
+	if ( FragIndex>=MAX_PROJECTILES && int(Type) == 2 )
+	{
+		vec3 Delta = SpritePos.xyz - xyz;
+		Delta = normalize(Delta) * min( length(Delta), 0.1 );
+		Vel += Delta;
+	}
 
 
 	//	collisions

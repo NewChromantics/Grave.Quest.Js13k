@@ -5,7 +5,8 @@ import * as PhysicsVelocityShader from './Micro_PhysicsVelocityShader.js'
 
 import DesktopXr from './DesktopXr.js'
 
-function GetTime(){	return Math.floor(performance.now());	}
+let TickCount = 0;
+function GetTime(){	return (TickCount==0) ? 0 : Math.floor(performance.now());	}
 
 let rc;
 let gl;
@@ -14,12 +15,38 @@ const OLD=0;
 const NEW=1;
 let PositionTextures=[];
 let VelocityTextures=[];
+let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
-const Macros = {DATAWIDTH:128,DATAHEIGHT:128,MAX_PROJECTILES:50,TIMESTEP:0.016666,FLOORY:0.0,NEARFLOORY:0.05,CUBESIZE:0.06,HALFCUBESIZE:0.03};
+
+const Macros =
+{
+	PI:3.1415926538,
+	SPRITEWIDTH:11,
+	DATAWIDTH:128,
+	DATAHEIGHT:128,
+	MAX_PROJECTILES:50,
+	TIMESTEP:0.016666,
+	FLOORY:0.0,
+	NEARFLOORY:0.05,
+	CUBESIZE:0.06,
+	HALFCUBESIZE:0.03
+};
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
 
+function PadArray(a,Length,Fill)
+{
+	while(a.length<Length)	a.push(Fill);
+	return a;
+}
+
+const Sprites = PadArray([`a2b7a3b9a1b2a1b5a1b4a1b5a1b59a1b2a1b2a1b2`],DATAHEIGHT,``);
+
+function PadPixels(a)
+{
+	return PadArray(a,DATAWIDTH,[0,0,0,0]);
+}
 
 //	set w to 1 when new data
 let ProjectileIndex = 0;
@@ -66,8 +93,6 @@ class RenderContext_t
 		Options.premultipliedAlpha = false;
 		Options.alpha = true;
 		gl = Canvas.getContext('webgl2', Options );
-		//this.OnResize();
-		
 		const RenderToFloat = gl.getExtension('EXT_color_buffer_float');
 		
 		this.CubeShader = this.CreateShader(CubeShader);
@@ -88,8 +113,6 @@ class RenderContext_t
 		let LinkStatus = gl.getProgramParameter( Program, gl.LINK_STATUS );
 		if ( !LinkStatus )
 		{
-			//	gr: list cases when no error "" occurs here;
-			//	- too many varyings > MAX_VARYING_VECTORS
 			const Error = gl.getProgramInfoLog(Program);
 			throw `Failed to link shader ${Error}`;
 		}
@@ -98,18 +121,29 @@ class RenderContext_t
 	
 }
 
+function RleToRgba(rle,i,a,w=SPRITEWIDTH)
+{
+	rle = rle.replace(/(\w)(\d+)/g, (_,char,count)=>char.repeat(count));
+	return rle.split``.map((v,i)=>[i%w,i/w>>0,parseInt(v,36)-10,1]).filter(p=>!!p[2]);
+}
 
 export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
 	rc = new RenderContext_t(Canvas);
 	Desktop = new DesktopXr(Canvas);
 	
-	//let InitMin = [-WorldSize,30,-WorldSize,0];
-	//let InitMax = [WorldSize,30,WorldSize,1];
-	let InitMin = [-2,4,-2,0];
-	let InitMax = [2,2,2,1];
+	
+	//	load sprites into pixels
+	let PixelRows = Sprites.map(RleToRgba).map(PadPixels);
+	PixelRows = new Float32Array( PixelRows.flat(2) );
+	
+	let InitMin = [-WorldSize,1,-WorldSize,0];
+	let InitMax = [WorldSize,1,WorldSize,1];
+	//let InitMin = [-2,4,-2,0];
+	//let InitMax = [2,2,2,1];
 	AllocTextures(PositionTextures,InitMin,InitMax);
-	AllocTextures(VelocityTextures,[0,0,0,0],[0,0,0,0]);
+	AllocTextures(VelocityTextures,[0,0,0,2],[0,0,0,2]);
+	AllocTextures(SpriteTextures,0,0,PixelRows);
 
 	function Tick()
 	{
@@ -126,6 +160,7 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		
 		//RenderPhysics([Canvas.width,Canvas.height]);
 		PostFrame();
+		TickCount++;
 	}
 	Tick();
 	return 'Bootup finished';
@@ -200,40 +235,34 @@ function InitTexture()
 }
 
 
-function AllocTextures(Textures,InitMin,InitMax)
+function AllocTextures(Textures,InitMin,InitMax,PixelData)
 {
 	Textures.push(null,null);
 	
 	//	todo: this will move to shader for init and maybe then dont need any texture initialisation code
 	function InitPosition(x,Index)
 	{
-			if ( Index < MAX_PROJECTILES )	return [0,0,0,0];
+		//if ( Index < MAX_PROJECTILES )	return [0,0,0,0];
 		return InitMin.map( (Min,i) => lerp(Min,InitMax[i]) );
 	}
 	const Width = DATAWIDTH;
 	const Height = DATAHEIGHT;
-	let PixelData = new Float32Array(new Array(Width*Height).fill().map(InitPosition).flat(2));
+	PixelData = PixelData || new Float32Array(new Array(Width*Height).fill().map(InitPosition).flat(2));
 	
 	const SourceFormat = gl.RGBA;
 	const SourceType = gl.FLOAT;
 	const InternalFormat = gl.RGBA32F;	//	webgl2
-	const MipLevel = 0;
-	const Border = 0;
 	const Rect = [0,0,Width,Height];
 
-	Textures[NEW] = gl.createTexture();
-	Textures[NEW].Size = [Width,Height];
-	gl.activeTexture( gl.TEXTURE0 );
-	gl.bindTexture( gl.TEXTURE_2D, Textures[NEW] );
-	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, PixelData );
-	InitTexture();
-
-	Textures[OLD] = gl.createTexture();
-	Textures[OLD].Size = [Width,Height];
-	gl.activeTexture( gl.TEXTURE0 );
-	gl.bindTexture( gl.TEXTURE_2D, Textures[OLD] );
-	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, PixelData );
-	InitTexture();
+	for ( let t of [OLD,NEW] )
+	{
+		Textures[t] = gl.createTexture();
+		Textures[t].Size = [Width,Height];
+		gl.activeTexture( gl.TEXTURE0 );
+		gl.bindTexture( gl.TEXTURE_2D, Textures[t] );
+		gl.texImage2D( gl.TEXTURE_2D, 0, InternalFormat, Width, Height, 0, SourceFormat, SourceType, PixelData );
+		InitTexture();
+	}
 }
 
 function SetUniformMat4(Program,Name,Value)
@@ -332,6 +361,7 @@ function Blit(ScreenSize,Textures,Shader)
 			SetUniformTexture( Shader,'NewPositions',2,PositionTextures[NEW]);
 		else
 			SetUniformTexture( Shader,'NewPositions',2,PositionTextures[OLD]);
+		SetUniformTexture( Shader,'SpritePositions',3,SpriteTextures[0]);
 	}
 	else
 	{

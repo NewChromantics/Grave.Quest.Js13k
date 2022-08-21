@@ -116,21 +116,21 @@ EncodeCubeVertexes();
 
 //	for readability _ is turned into a(0)
 const Ghost =`
-__bbbbbb__
-_bbbbbbbb_
-bb_bbbb_bb
-bb_bbbb_bb
-bbbbbbbbbb
-bbbbbbbbbb
-bbbbbbbbbb
-bbbbbbbbbb
-bbbbbbbbbb
-bb_bbbb_bb
+__bbbbbbb__
+_bbbbbbbbb_
+bb_bbbbb_bb
+bb_bbbbb_bb
+bbbbbbbbbbb
+bbbbbbbbbbb
+bbbbbbbbbbb
+bbbbbbbbbbb
+bbbbbbbbbbb
+bb_bb_bb_bb
 `;
 
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
-function DecodeRle(rle,w=10)
+function DecodeRle(rle,w=11)
 {
 	rle = rle.replace(/(\w)(\d+)/g, (_, char, count) =>char.repeat(count));
 	return rle.split``.map((v,i)=>[i%w,i/w>>0,parseInt(v,36)-10,0]).filter(x=>!!x[2]);

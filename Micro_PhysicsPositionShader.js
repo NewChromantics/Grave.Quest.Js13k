@@ -1,3 +1,13 @@
+export const SpriteMeta =
+`
+#define SpriteIndex	(1.0+floor(gl_FragCoord.y/6.0))
+#define SpriteDepth	(mod(gl_FragCoord.y,6.0))
+#define SinTimef(Speed)	( fract(Time*SpriteIndex*33.33/Speed) * PI * 2.0 )
+#define AnimOff		vec3( 0.5*cos(SinTimef(3400.0)), 0.3*sin(SinTimef(800.0)), 0.8*cos(SinTimef(8000.0)) )
+#define Spritexyz	vec3(-10.0+SpriteIndex*1.5,3,SpriteDepth*CUBESIZE)+AnimOff
+#define SpriteTrans mat4( vec4(0.1,0,0,0),	vec4(0,-0.1,0,0),	vec4(0,0,0.1,0),	vec4(Spritexyz,1) )
+`;
+
 export const Vert =
 `//	quad crammed into vec4s
 #define u vec4(0,1,1,0)[gl_VertexID]
@@ -19,6 +29,10 @@ uniform vec4 ProjectileVel[MAX_PROJECTILES];
 uniform vec4 ProjectilePos[MAX_PROJECTILES];
 #define			FragIndex	(int(gl_FragCoord.x) + (int(gl_FragCoord.y)*DATAWIDTH))
 
+uniform sampler2D SpritePositions;
+
+uniform float Time;
+${SpriteMeta}
 
 void main()
 {
@@ -35,6 +49,12 @@ void main()
 	if ( FragIndex < MAX_PROJECTILES && ProjectilePos[FragIndex].w > 0.0 )
 		xyz = ProjectilePos[FragIndex].xyz;
 
+	if ( FragIndex >= MAX_PROJECTILES && Time == 0.0 )
+	{
+		ivec2 Spriteuv = ivec2( gl_FragCoord.x, 0 );
+		vec4 SpritePos = SpriteTrans * texelFetch( SpritePositions, Spriteuv, 0 );
+		xyz = SpritePos.xyz;
+	}
 	Colour.xyz = xyz;
 }
 `;
