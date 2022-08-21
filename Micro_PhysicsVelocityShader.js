@@ -82,6 +82,7 @@ vec3 hash32(vec2 p)
 //	debris 1
 //	spriteN
 #define MOVING	(Type==1.0?1.0:0.0)
+#define ISSPRITE	(Type==2.0)
 
 uniform float Time;
 ${SpriteMeta}
@@ -106,14 +107,16 @@ void main()
 	}
 
 	Vel *= 1.0 - AirDrag;
+if ( ISSPRITE )
+	Vel *= 0.98;
 	Vel.y += MOVING * -GravityY * TIMESTEP;
 
 
 	//	spring to sprite
-	if ( FragIndex>=MAX_PROJECTILES && int(Type) == 2 )
+	if ( FragIndex>=MAX_PROJECTILES && ISSPRITE )
 	{
 		vec3 Delta = SpritePos.xyz - xyz;
-		Delta = normalize(Delta) * min( length(Delta), 0.1 );
+		Delta = normalize(Delta) * min( length(Delta), 4.1 );
 		Vel += Delta;
 	}
 
