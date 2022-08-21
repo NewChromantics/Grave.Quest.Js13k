@@ -21,7 +21,7 @@ const float GravityY = 16.0;
 
 
 //	gr: make this bigger based on velocity so sliding projectiles dont hit so much
-#define PROJECTILE_MAX_SIZE	(CUBESIZE*4.0)
+#define PROJECTILE_MAX_SIZE	(CUBESIZE*5.0)
 #define PROJECTILE_MIN_SIZE	(CUBESIZE*1.0)
 #define PROJECTILE_MIN_VEL	10.0
 #define PROJECTILE_MAX_VEL	40.0
@@ -102,6 +102,33 @@ void main()
 	Vel.y += Type * -GravityY * TIMESTEP;
 
 
+	//	collisions
+	if ( FragIndex>=MAX_PROJECTILES )
+	for ( int p=0;	p<MAX_PROJECTILES;	p++ )
+	{
+		ivec2 ppuv = ivec2(p,0);
+		vec3 ppp_old = texelFetch( OldPositions, ppuv, 0 ).xyz;
+		vec3 ppp_new = texelFetch( NewPositions, ppuv, 0 ).xyz;
+
+		//	need to invalidate, but not working, so sometimes projectiles can cut through randomly (old to new pos)
+		if ( ProjectilePos[p].w == 1.0 )
+			ppp_old = ppp_new = ProjectilePos[p].xyz;
+
+		vec3 ppp = NearestToLine3( xyz, ppp_old, ppp_new );
+		vec3 ppv = texelFetch( OldVelocitys, ppuv, 0 ).xyz;
+		float pplen = min( PROJECTILE_MAX_VEL,length(ppv) );
+		float SizeScale = mix( PROJECTILE_MIN_SIZE, PROJECTILE_MAX_SIZE, Range(PROJECTILE_MIN_VEL,PROJECTILE_MAX_VEL,pplen) );
+		bool Hit = length(ppp-xyz) < SizeScale;
+		if ( !Hit )
+			continue;
+
+		float Randomness = 0.4;
+		vec3 RandDir = mix( vec3(-1), vec3(1), hash32(uv*777.777) );
+		Vel = mix( normalize(ppv), RandDir, Randomness );
+		Vel *= pplen;
+		Type = 1.0;
+	}
+
 	if ( xyz.y <= float(FLOORY) )
 	{
 		Vel = reflect( Vel*(1.0-FloorDrag), UP );
@@ -118,72 +145,3 @@ void main()
 	Colour = vec4(Vel,Type);
 }
 `;
-
-
-
-/*
- 
- if ( xyz.y <= float(FLOORY) )
- {
-	 vec3 Bounce = reflect( Vel, vec3(0,1,0) );
-	 Bounce.xyz *= 1.0 - FloorDrag;
-	 xyz = vec3(0);
-	 Vel = Bounce * TIMESTEP;
-
-	 if ( length(Bounce) < 0.0000001*60.0 )
-	 {
-		 Type = 0.0;	//	settle
-		 Vel = vec3(0);
-	 }
-	 else
-	 {
-		 Type = 1.0;
-	 }
- }
- else
- {
-	 Vel *= 1.0 - AirDrag;
-	 Vel.y += TIMESTEP * GravityY * Type;
- }
-
-
- //	collisions
- if ( FragIndex>=MAX_PROJECTILES )
- for ( int p=0;	p<MAX_PROJECTILES;	p++ )
- {
-	 ivec2 ppuv = ivec2(p,0);
-	 vec3 ppp_old = texelFetch( OldPositions, ppuv, 0 ).xyz;
-	 vec3 ppp_new = texelFetch( NewPositions, ppuv, 0 ).xyz;
-	 
-	 //	need to invalidate, but not working, so sometimes projectiles can cut through randomly (old to new pos)
-	 if ( ProjectilePos[p].w == 1.0 )
-		 ppp_old = ppp_new = ProjectilePos[p].xyz;
-
-	 vec3 ppp = NearestToLine3( xyz, ppp_old, ppp_new );
-	 vec3 ppv = texelFetch( OldVelocitys, ppuv, 0 ).xyz;
-	 float pplen = min( PROJECTILE_MAX_VEL,length(ppv) );
-	 float SizeScale = mix( PROJECTILE_MIN_SIZE, PROJECTILE_MAX_SIZE, Range(PROJECTILE_MIN_VEL,PROJECTILE_MAX_VEL,pplen) );
-	 bool Hit = length(ppp-xyz) < SizeScale;
-	 if ( !Hit )
-		 continue;
-
-	 float Randomness = 0.9;
-	 vec3 RandDir = normalize(mix( vec3(-Randomness), vec3(Randomness), hash32(uv*777.777) ));
-	 //Vel = ppv;
-	 Vel = pplen*RandDir;
-
-	 float Randomness = 0.9;
-	 float Strength = length(ppv) * 10.0;
-	 vec3 Dir = normalize(ppv) + normalize(mix( vec3(-Randomness), vec3(Randomness), hash32(uv*777.777) ));
-	 Dir = normalize(Dir);
-	 Force += Dir * vec3(Strength);
-	 GravityForce = vec3(0);
-	 //float nexty = xyz.y + ((Force.y+GravityForce.y) * TIMESTEP);
-	 //if ( nexty <= float(FLOORY) )
-	 //	Force.y = abs(Force.y);
-	 if ( xyz.y <= float(NEARFLOORY) )
-
-	 Type = 1.0;
- }
-
- */
