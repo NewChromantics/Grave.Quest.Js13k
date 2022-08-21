@@ -107,16 +107,17 @@ void main()
 	}
 
 	Vel *= 1.0 - AirDrag;
-if ( ISSPRITE )
-	Vel *= 0.98;
 	Vel.y += MOVING * -GravityY * TIMESTEP;
 
 
 	//	spring to sprite
 	if ( FragIndex>=MAX_PROJECTILES && ISSPRITE )
 	{
+		if ( Time < INTROMS )	Vel *= 0.48;
+		if ( Time > INTROMS )	Vel *= 0.95;
+		float Speed = Time < INTROMS ? 3.0 : 4.1;
 		vec3 Delta = SpritePos.xyz - xyz;
-		Delta = normalize(Delta) * min( length(Delta), 4.1 );
+		Delta = normalize(Delta) * min( length(Delta), Speed );
 		Vel += Delta;
 	}
 

@@ -3,10 +3,11 @@ export const SpriteMeta =
 #define SpriteIndex	(1.0+floor(gl_FragCoord.y/6.0))
 #define SpriteDepth	(mod(gl_FragCoord.y,6.0))
 #define TimeOff		( Time==0.0 ? 0.0 : 100000.0 )
-#define SpriteTime	( (TimeOff+Time) * (SpriteIndex/100.0) + SpriteIndex*37.47 )
+#define TimePause	( Time < INTROMS ? 0.01 : 1.0 )
+#define SpriteTime	(( (TimeOff+Time) * (SpriteIndex/100.0) + SpriteIndex*37.47 )*TimePause)
 #define SinTimef(Speed)	( fract(SpriteTime/Speed) * PI * 2.0 )
 #define AnimOff		vec3( 2.5*cos(SinTimef(480.0)), 2.3*sin(SinTimef(400.0)), 2.8*cos(SinTimef(300.0)) )
-#define Spritexyz	vec3(-10.0+SpriteIndex*1.1,3,SpriteDepth*CUBESIZE*1.3)+AnimOff
+#define Spritexyz	vec3(-10.0+SpriteIndex*1.1,3,-7.0+SpriteDepth*CUBESIZE*1.3)+AnimOff
 #define SpriteTrans mat4( vec4(0.1,0,0,0),	vec4(0,-0.1,0,0),	vec4(0,0,0.1,0),	vec4(Spritexyz,1) )
 `;
 
@@ -56,8 +57,8 @@ void main()
 	{
 		ivec2 Spriteuv = ivec2( gl_FragCoord.x, 0 );
 		vec4 SpritePos = SpriteTrans * texelFetch( SpritePositions, Spriteuv, 0 );
-		SpritePos.y = float(FLOORY);
-		xyz = mix(xyz,SpritePos.xyz, 1.0);
+		SpritePos.y = float(INTROY);
+		xyz = mix(xyz,SpritePos.xyz, 0.99);
 	}
 	Colour.xyz = xyz;
 }
