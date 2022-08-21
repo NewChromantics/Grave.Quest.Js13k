@@ -16,7 +16,7 @@ let PositionTextures=[];
 let VelocityTextures=[];
 let TextureTarget;
 
-const Macros = {DATAWIDTH:128,DATAHEIGHT:128,MAX_PROJECTILES:50,TIMESTEP:0.016666,FLOORY:0.0,NEARFLOORY:0.05,CUBESIZE:0.1,HALFCUBESIZE:0.05};
+const Macros = {DATAWIDTH:128,DATAHEIGHT:128,MAX_PROJECTILES:50,TIMESTEP:0.016666,FLOORY:0.0,NEARFLOORY:0.05,CUBESIZE:0.06,HALFCUBESIZE:0.03};
 const MacroSource = Object.entries(Macros)./*filter(kv=>Number(kv[1])===kv[1]).*/map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
 
