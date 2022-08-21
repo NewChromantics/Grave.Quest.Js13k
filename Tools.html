@@ -9,6 +9,7 @@
 
 <script type="module">
 
+	
 function EncodeCubeVertexes()
 {
 	let Positions = [];
@@ -108,7 +109,71 @@ function EncodeCubeVertexes()
 	console.log(`All values matched`);
 	
 }
-	EncodeCubeVertexes();
+EncodeCubeVertexes();
+
+
+
+
+//	for readability _ is turned into a(0)
+const Ghost =`
+__bbbbbb__
+_bbbbbbbb_
+bb_bbbb_bb
+bb_bbbb_bb
+bbbbbbbbbb
+bbbbbbbbbb
+bbbbbbbbbb
+bbbbbbbbbb
+bbbbbbbbbb
+bb_bbbb_bb
+`;
+
+//	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
+//	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
+function DecodeRle(rle,w=10)
+{
+	rle = rle.replace(/(\w)(\d+)/g, (_, char, count) =>char.repeat(count));
+	return rle.split``.map((v,i)=>[i%w,i/w>>0,parseInt(v,36)-10,0]).filter(x=>!!x[2]);
+}
+
+function EncodeSpriteToRle(SpriteString)
+{
+	let rle = ``;
+	let Width = SpriteString.split('\n').length;
+	console.log(`Sprite Width ${Width}`);
+	let Rows = SpriteString.split('\n');
+	Rows = Rows.map( str => str.split('').map(c => c=='_'?'a':c).join('') );
+	let CharString = Rows.join('');
+	console.log(`CharString=${CharString}`);
+	
+	let CurrentChar = null;
+	let CurrentCount = 0;
+	function EndCurrent()
+	{
+		if ( CurrentChar != null )
+		{
+			rle += `${CurrentChar}${CurrentCount}`;
+		}
+		CurrentChar = null;
+		CurrentCount = 0;
+	}
+	for ( let i=0;	i<CharString.length;	i++ )
+	{
+		let Char = CharString[i];
+		if ( Char != CurrentChar )
+			EndCurrent();
+		CurrentChar = Char;
+		CurrentCount++;
+	}
+	EndCurrent();
+	
+	//	want to output coords
+	console.log(`RLE:${rle}`);
+	
+	console.log( DecodeRle(rle) );
+}
+
+EncodeSpriteToRle(Ghost);
 
 </script>
 
