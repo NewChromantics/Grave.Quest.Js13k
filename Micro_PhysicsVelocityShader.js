@@ -17,7 +17,7 @@ const float AirDrag = 0.01;
 const float FloorDragMin = 0.3;	//	less = more bounce
 const float FloorDragMax = 0.8;	//	less = more bounce
 const float GravityY = 16.0;
-#define FloorDrag	mix(FloorDragMin,FloorDragMax,RandomVoxel*Random4.x)
+#define FloorDrag	mix(FloorDragMin,FloorDragMax,RAND1*Random4.x)
 
 
 //	gr: make this bigger based on velocity so sliding projectiles dont hit so much
@@ -75,7 +75,8 @@ vec3 hash32(vec2 p)
 	return fract((p3.xxy+p3.yzz)*p3.zyx);
 }
 
-#define UP	vec3(0,1,0)
+#define UP		vec3(0,1,0)
+#define MOVING	min(Type,1.0)
 
 void main()
 {
@@ -83,12 +84,7 @@ void main()
 	vec4 Pos4 = texelFetch( NewPositions, ivec2(gl_FragCoord), 0 );
 	vec3 Vel = Vel4.xyz;
 	vec3 xyz = Pos4.xyz;
-	float RandomVoxel = Pos4.w;
-
-	if ( FragIndex < MAX_PROJECTILES )
-	{
-		//Type = 1.0;
-	}
+	float RAND1 = Pos4.w;
 
 	//	new projectile data
 	if ( FragIndex < MAX_PROJECTILES && ProjectileVel[FragIndex].w > 0.0 )
@@ -98,7 +94,7 @@ void main()
 	}
 
 	Vel *= 1.0 - AirDrag;
-	Vel.y += Type * -GravityY * TIMESTEP;
+	Vel.y += MOVING * -GravityY * TIMESTEP;
 
 
 	//	collisions
