@@ -16,20 +16,25 @@ let PositionTextures=[];
 let VelocityTextures=[];
 let TextureTarget;
 
+const Macros = {DATAWIDTH:128,DATAHEIGHT:128,MAX_PROJECTILES:50,TIMESTEP:0.016666,FLOORY:0.0,NEARFLOORY:0.05,CUBESIZE:0.1,HALFCUBESIZE:0.05};
+const MacroSource = Object.entries(Macros)./*filter(kv=>Number(kv[1])===kv[1]).*/map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
+Object.assign(window,Macros);
+
+
 //	set w to 1 when new data
-let MAX_PROJECTILES	= 50;
 let ProjectileIndex = 0;
 let ProjectilePos = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
 let ProjectileVel = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
-let WorldSize = 200;
-let WorldNear = -20;
+let WorldSize = 100;
+let WorldNear = 0;
+
 
 let Desktop;
 let FireRepeatMs = 40;
 
 
 //	lerp is random if no time provided
-function lerp(Min,Max,Time=Math.random())
+function lerp(Min=0,Max=1,Time=Math.random())
 {
 	return Min + (Max-Min)*Time;
 }
@@ -38,6 +43,7 @@ function lerp(Min,Max,Time=Math.random())
 function CompileShader(Type,Source)
 {
 	const Shader = gl.createShader(Type);
+	Source = `#version 300 es\nprecision highp float;\n${MacroSource}\n${Source}`;
 	gl.shaderSource( Shader, Source );
 	gl.compileShader( Shader );
 	const CompileStatus = gl.getShaderParameter( Shader, gl.COMPILE_STATUS);
@@ -98,8 +104,13 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	rc = new RenderContext_t(Canvas);
 	Desktop = new DesktopXr(Canvas);
 	
-	AllocTextures(PositionTextures,[-WorldSize,30,WorldSize-WorldSize,0],[WorldSize,30,-WorldNear-WorldSize-WorldSize,1]);
+	//let InitMin = [-WorldSize,30,-WorldSize,0];
+	//let InitMax = [WorldSize,30,WorldSize,1];
+	let InitMin = [-2,4,-2,0];
+	let InitMax = [2,2,2,1];
+	AllocTextures(PositionTextures,InitMin,InitMax);
 	AllocTextures(VelocityTextures,[0,0,0,0],[0,0,0,0]);
+
 	function Tick()
 	{
 		window.requestAnimationFrame(Tick);
@@ -141,10 +152,13 @@ function FireWeapon(Name,Transform)
 {
 	WeaponLastFired[Name] = GetTime();
 	
-	let Pos = TransformPoint( Transform, 0, 0, lerp(0,1) );
-	let Vel = TransformPoint( Transform, lerp(-1,1), lerp(-1,1), lerp(20,30), 0 );
-	Vel.y += lerp(6,8);
-	
+	//let Pos = TransformPoint( Transform, 0, 0, lerp(0,1) );
+	let Pos = TransformPoint( Transform, 0, 0, 0 );
+	//let Vel = TransformPoint( Transform, lerp(-1,1), lerp(-1,1), lerp(20,30), 0 );
+	let Vel = TransformPoint( Transform, 0, 0, lerp(20,20), 0 );
+	//Vel.y += lerp(6,8);
+	Vel.y += lerp(6,6);
+
 	Set( ProjectilePos[ProjectileIndex], Pos );
 	Set( ProjectileVel[ProjectileIndex], Vel );
 	ProjectileIndex = (ProjectileIndex+1) % MAX_PROJECTILES;
@@ -196,24 +210,22 @@ function AllocTextures(Textures,InitMin,InitMax)
 	//	todo: this will move to shader for init and maybe then dont need any texture initialisation code
 	function InitPosition(x,Index)
 	{
-		return InitMin.map( (Min,i) => lerp(Min,InitMax[i],Math.random()) );
+			if ( Index < MAX_PROJECTILES )	return [0,0,0,0];
+		return InitMin.map( (Min,i) => lerp(Min,InitMax[i]) );
 	}
-	const Width = 128;
-	const Height = 128;
+	const Width = DATAWIDTH;
+	const Height = DATAHEIGHT;
 	let PixelData = new Float32Array(new Array(Width*Height).fill().map(InitPosition).flat(2));
 	
-	Textures[NEW] = gl.createTexture();
-	Textures[NEW].Size = [Width,Height];
-
 	const SourceFormat = gl.RGBA;
-	
 	const SourceType = gl.FLOAT;
 	const InternalFormat = gl.RGBA32F;	//	webgl2
 	const MipLevel = 0;
 	const Border = 0;
 	const Rect = [0,0,Width,Height];
 
-	//	subimage for later partial updating
+	Textures[NEW] = gl.createTexture();
+	Textures[NEW].Size = [Width,Height];
 	gl.activeTexture( gl.TEXTURE0 );
 	gl.bindTexture( gl.TEXTURE_2D, Textures[NEW] );
 	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, PixelData );
@@ -223,7 +235,7 @@ function AllocTextures(Textures,InitMin,InitMax)
 	Textures[OLD].Size = [Width,Height];
 	gl.activeTexture( gl.TEXTURE0 );
 	gl.bindTexture( gl.TEXTURE_2D, Textures[OLD] );
-	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, null );
+	gl.texImage2D( gl.TEXTURE_2D, MipLevel, InternalFormat, Width, Height, Border, SourceFormat, SourceType, PixelData );
 	InitTexture();
 }
 
@@ -259,7 +271,7 @@ function Render(w,h)
 	gl.bindFramebuffer( gl.FRAMEBUFFER, null );
 	const Viewport=[0,0,w/h,h/h];
 	gl.viewport(0,0,w,h);
-	gl.clearColor( 0, 0.1, 0.3, 1.0 );
+	gl.clearColor( 0.1, 0.05, 0.3, 1.0 );
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.disable(gl.CULL_FACE);
 	gl.enable(gl.DEPTH_TEST);
@@ -269,15 +281,14 @@ function Render(w,h)
 	gl.useProgram( Shader );
 
 	//	set uniforms
-	//const Viewport=[0,0,1,1];
-	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.GetWorldToCameraMatrix());
+	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.GetWorldToLocalMatrix());
 	SetUniformMat4(Shader,'CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
 	SetUniformVector(Shader,'Time',[GetTime()]);
 	
 	//	hardcoded texture slots
 	SetUniformTexture(Shader,'PositionsTexture',0,PositionTextures[NEW]);
 	SetUniformTexture(Shader,'OldPositionsTexture',1,PositionTextures[OLD]);
-	SetUniformTexture(Shader,'VelocitiesTexture',2,VelocityTextures[OLD]);
+	SetUniformTexture(Shader,'NewVelocitys',2,VelocityTextures[NEW]);
 
 	
 	let Instances = PositionTextures[NEW].Size[0] * PositionTextures[NEW].Size[1];
@@ -310,6 +321,7 @@ function Blit(ScreenSize,Textures,Shader)
 	gl.clearColor(1,0,0,1);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.disable(gl.CULL_FACE);
+	gl.disable( gl.BLEND );
 
 	//	bind shader
 	gl.useProgram( Shader );
@@ -319,6 +331,10 @@ function Blit(ScreenSize,Textures,Shader)
 	{
 		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[OLD]);
 		SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[OLD]);
+		if ( Target != PositionTextures[NEW] )
+			SetUniformTexture( Shader,'NewPositions',2,PositionTextures[NEW]);
+		else
+			SetUniformTexture( Shader,'NewPositions',2,PositionTextures[OLD]);
 	}
 	else
 	{
@@ -327,6 +343,7 @@ function Blit(ScreenSize,Textures,Shader)
 	}
 	SetUniformVector(Shader,'ProjectilePos',ProjectilePos.flat(4));
 	SetUniformVector(Shader,'ProjectileVel',ProjectileVel.flat(4));
+	SetUniformVector(Shader,'Random4',[lerp(),lerp(),lerp(),lerp()])
 
 	gl.drawArrays( gl.TRIANGLE_FAN, 0, 4 );
 }
@@ -334,6 +351,6 @@ function Blit(ScreenSize,Textures,Shader)
 
 function RenderPhysics(ScreenSize)
 {
-	Blit(ScreenSize,PositionTextures,rc.PhysicsPositionShader);
 	Blit(ScreenSize,VelocityTextures,rc.PhysicsVelocityShader);
+	Blit(ScreenSize,PositionTextures,rc.PhysicsPositionShader);
 }

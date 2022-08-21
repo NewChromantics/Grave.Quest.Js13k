@@ -1,14 +1,13 @@
 export const Vert =
-`#version 300 es
-
-out float FragCubeIndex;
+`out float FragCubeIndex;
 out vec3 FragWorldPosition;
+out vec4 Velocity;
 uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
 uniform float Time;
 uniform sampler2D PositionsTexture;
 uniform sampler2D OldPositionsTexture;
-uniform sampler2D VelocitiesTexture;
+uniform sampler2D NewVelocitys;
 
 #define ENABLE_SUPER_SMALL
 
@@ -52,9 +51,14 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 }
 #endif
 
+#define FloorSize (50.0)
+#define FloorCubeSize (FloorSize/CUBESIZE)
+#define FloorTransform	mat4( vec4(FloorCubeSize,0,0,0),	vec4(0,1,0,0),	vec4(0,0,FloorCubeSize,0),	vec4(0,float(FLOORY)-CUBESIZE,0,1) )
 
 mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 {
+	if ( CubeIndex == 127*127 )	return FloorTransform;
+
 	int u = CubeIndex % textureSize(PositionsTexture,0).x;
 	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
 
@@ -69,48 +73,42 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 	return Transform;
 }
 
-float CubeSize = 1.0;
-float VelocityStretch = 100.0;
-bool UsePreviousPositionsTexture = false;
+float VelocityStretch = 4.0;
+#define ENABLE_STRETCH	(CubeIndex < 127*127)
+//#define ENABLE_STRETCH	false
 
 vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPosition)
 {
 	//	stretching relies on cube being -1...1
 	//	gr: or does it? cubes stretch better, but always double size
-	//LocalPosition = mix( vec3(-CubeSize),vec3(CubeSize), LocalPosition);
-	LocalPosition*=CubeSize;
-//vec4 WorldPos = LocalToWorldTransform * vec4(LocalPosition,1.0);
-//WorldPos.xyz *= WorldPos.www;
-//WorldPos.w = 1.0;
+	LocalPosition = mix( vec3(-HALFCUBESIZE),vec3(HALFCUBESIZE), LocalPosition);
 
 	int u = CubeIndex % textureSize(PositionsTexture,0).x;
 	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
-	vec3 WorldVelocity = texelFetch( VelocitiesTexture, ivec2(u,v), 0 ).xyz;
+	Velocity = texelFetch( NewVelocitys, ivec2(u,v), 0 );
 
 	vec4 WorldPos = LocalToWorldTransform * vec4(LocalPosition,1.0);
 	WorldPos.xyz *= WorldPos.www;
+	//WorldPos.y = max( WorldPos.y, float(FLOORY) );
 	WorldPos.w = 1.0;
+
+	//	stretch world pos along velocity
+	vec3 TailDelta = -Velocity.xyz * VelocityStretch * TIMESTEP;
+	if ( !ENABLE_STRETCH || length(TailDelta)<CUBESIZE)
+		return WorldPos.xyz;
 
 	vec4 OriginWorldPos = LocalToWorldTransform * vec4(0,0,0,1);
 	OriginWorldPos.xyz *= OriginWorldPos.www;
 	OriginWorldPos.w = 1.0;
 	
-	//	stretch world pos along velocity
-	vec3 TailDelta = -WorldVelocity * VelocityStretch * (1.0/60.0);
 
 	
 	vec3 LocalPosInWorld = WorldPos.xyz - OriginWorldPos.xyz;
 	
 	//	this is the opposite of what it should be and shows the future
 	//	but better than flashes of past that wasnt there (better if we just stored prev pos)
-	float ForwardWeight = UsePreviousPositionsTexture ? 0.9 : 0.9;
-	float BackwarddWeight = UsePreviousPositionsTexture ? 0.0 : 0.1;
-	vec3 NextPos = WorldPos.xyz - (TailDelta*ForwardWeight);
-	vec3 PrevPos = WorldPos.xyz + (TailDelta*BackwarddWeight);
-	
-	//	"lerp" between depending on whether we're at front or back
-	//	^^ this is why we're getting angled shapes, even if we did a cut off we
-	//	could have 1/8 verts in front
+	vec3 NextPos = WorldPos.xyz - (TailDelta*0.9);
+	vec3 PrevPos = WorldPos.xyz + (TailDelta*0.1);
 	
 	//	gr; this nvidia object space motion blur stretches if the [current]normal
 	//		is inline(dot(next-prev,velocity)>0) with the motion vector(velocity)... in EYESPACE
@@ -139,21 +137,30 @@ void main()
 `;
 
 export const Frag =
-`#version 300 es
-precision highp float;
-out vec4 OutFragColor;
+`out vec4 OutFragColor;
 in float FragCubeIndex;
-uniform sampler2D PositionsTexture;
-#define MAX_PROJECTILES	50
+in vec3 FragWorldPosition;
+in vec4 Velocity;
+vec4 Light = vec4(0,0,0,120);
 
 void main()
 {
+	int Type = int(Velocity.w);
 	float r = mod(FragCubeIndex,1234.0)/1000.0;
 	float g = mod(FragCubeIndex,100.0)/100.0;
 	float b = mod(FragCubeIndex,7777.0)/7777.0;
 	OutFragColor = vec4(r,g*0.3,b,1);
 	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 		OutFragColor = vec4(0,1,0,1);
+
+	float Lit = length(FragWorldPosition-Light.xyz)/Light.w;
+	Lit = Lit < 1.0 ? 1.0 : 0.2;
+	OutFragColor.xyz *= vec3(Lit);
+
+	//OutFragColor = (Type==0) ? vec4(1,0,0,1) : vec4(0,1,0,1);
+	if ( int(FragCubeIndex) == 127*127 )
+		OutFragColor.xyz = vec3(0);
+
 	//OutFragColor = texture(PositionsTexture,vec2(0));
 }
 `;

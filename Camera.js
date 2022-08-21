@@ -13,10 +13,10 @@ function Length3(x,y,z)
 	return Math.sqrt(x*x+y*y+z*z);
 }
 
-function Normalise3(a)
+function Normalise3(a,NewLength=1)
 {
 	let Length = Length3( ...a );
-	return a.map( x => x/Length );
+	return a.map( x => x/Length*NewLength );
 }
 
 function Cross3(a0,a1,a2,b0,b1,b2)
@@ -78,7 +78,7 @@ export default class Camera
 		this.ProjectionMatrix = undefined;	//	override projection matrix
 		
 		this.NearDistance = 0.01;
-		this.FarDistance = 1000;
+		this.FarDistance = 10000;
 	}
 	
 		
@@ -133,11 +133,8 @@ export default class Camera
 	}
 
 	
-	//	camera's modelview transform
-	//	gr: this should be renamed WorldToLocal
-	GetWorldToCameraMatrix()
+	GetWorldToLocalMatrix()
 	{
-		//	https://stackoverflow.com/questions/349050/calculating-a-lookat-matrix
 		let Rotation = this.GetLocalRotationMatrix();
 		
 		//	to move from world space to camera space, we should take away the camera origin
@@ -150,7 +147,7 @@ export default class Camera
 	
 	GetLocalToWorldMatrix()
 	{
-		let WorldToCameraMatrix = new DOMMatrix(this.GetWorldToCameraMatrix());
+		let WorldToCameraMatrix = new DOMMatrix(this.GetWorldToLocalMatrix());
 		return WorldToCameraMatrix.inverse();
 	}
 	
@@ -162,20 +159,21 @@ export default class Camera
 	}
 	
 	//	get forward vector in world space
-	GetForward(Normalised=true)
+	GetForward(Normalised=1)
 	{
 		let LookAt = this.LookAt;
 
 		//	external transform, so need to calc the real lookat
 		if ( this.Rotation4x4 )
 		{
+			//let LookAtTrans = this.GetWorldTransform([0,0,-1]);
 			let LocalToWorld = this.GetLocalToWorldMatrix();
 			//	gr: why is this backwards...
-			LookAt = new DOMMatrix(LocalToWorld).transformPoint(0,0,-1);
+			LookAt = new DOMMatrix(LocalToWorld).transformPoint(new DOMPoint(0,0,-1));
 		}
 			
 		let z = Subtract3( LookAt, this.Position );
-		return Normalised ? Normalise3( z ) : z;
+		return Normalised ? Normalise3( z, Normalised ) : z;
 	}
 		
 	MovePositionAndLookAt(Delta)
