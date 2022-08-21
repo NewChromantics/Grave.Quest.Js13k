@@ -21,6 +21,8 @@ let TextureTarget;
 
 const Macros =
 {
+	FLOORSIZE:200.001,
+	LIGHTRAD:20.01,
 	PI:3.1415926538,
 	SPRITEWIDTH:11,
 	DATAWIDTH:128,

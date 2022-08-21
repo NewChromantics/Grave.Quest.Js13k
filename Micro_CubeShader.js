@@ -51,8 +51,7 @@ vec3 GetLocalPosition(int CubeVertexIndex)
 }
 #endif
 
-#define FloorSize (50.0)
-#define FloorCubeSize (FloorSize/CUBESIZE)
+#define FloorCubeSize (FLOORSIZE/CUBESIZE)
 #define FloorTransform	mat4( vec4(FloorCubeSize,0,0,0),	vec4(0,1,0,0),	vec4(0,0,FloorCubeSize,0),	vec4(0,float(FLOORY)-CUBESIZE,0,1) )
 
 mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
@@ -141,7 +140,7 @@ export const Frag =
 in float FragCubeIndex;
 in vec3 FragWorldPosition;
 in vec4 Velocity;
-vec4 Light = vec4(0,0,0,10);
+vec4 Light = vec4(0,0,0,LIGHTRAD);
 
 void main()
 {
