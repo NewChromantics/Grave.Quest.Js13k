@@ -141,7 +141,7 @@ export const Frag =
 in float FragCubeIndex;
 in vec3 FragWorldPosition;
 in vec4 Velocity;
-vec4 Light = vec4(0,0,0,120);
+vec4 Light = vec4(0,0,0,10);
 
 void main()
 {
@@ -152,14 +152,16 @@ void main()
 	OutFragColor = vec4(r,g*0.3,b,1);
 	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 		OutFragColor = vec4(0,1,0,1);
+	if ( int(FragCubeIndex) == 127*127 )
+		OutFragColor.xyz = vec3(0.1);
 
 	float Lit = length(FragWorldPosition-Light.xyz)/Light.w;
 	Lit = Lit < 1.0 ? 1.0 : 0.2;
 	OutFragColor.xyz *= vec3(Lit);
 
 	//OutFragColor = (Type==0) ? vec4(1,0,0,1) : vec4(0,1,0,1);
-	if ( int(FragCubeIndex) == 127*127 )
-		OutFragColor.xyz = vec3(0);
+	//if ( int(FragCubeIndex) == 127*127 )
+	//	OutFragColor.xyz = vec3(0);
 
 	//OutFragColor = texture(PositionsTexture,vec2(0));
 }
