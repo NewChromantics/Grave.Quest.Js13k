@@ -152,13 +152,10 @@ function FireWeapon(Name,Transform)
 {
 	WeaponLastFired[Name] = GetTime();
 	
-	//let Pos = TransformPoint( Transform, 0, 0, lerp(0,1) );
-	let Pos = TransformPoint( Transform, 0, 0, 0 );
-	//let Vel = TransformPoint( Transform, lerp(-1,1), lerp(-1,1), lerp(20,30), 0 );
-	let Vel = TransformPoint( Transform, 0, 0, lerp(20,20), 0 );
-	//Vel.y += lerp(6,8);
-	Vel.y += lerp(6,6);
-
+	let Pos = TransformPoint( Transform, 0, 0, lerp(0,1) );
+	let Vel = TransformPoint( Transform, lerp(-1,1), lerp(-1,1), lerp(30,40), 0 );
+	Vel.y += lerp(6,8);
+	
 	Set( ProjectilePos[ProjectileIndex], Pos );
 	Set( ProjectileVel[ProjectileIndex], Vel );
 	ProjectileIndex = (ProjectileIndex+1) % MAX_PROJECTILES;
