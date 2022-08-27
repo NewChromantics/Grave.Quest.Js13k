@@ -115,7 +115,7 @@ EncodeCubeVertexes();
 
 
 //	for readability _ is turned into a(0)
-const Ghost =`
+const Ghost =`Ghost
 __bbbbbbb__
 _bbbbbbbbb_
 bb_bbbbb_bb
@@ -128,6 +128,17 @@ bbbbbbbbbbb
 bb_bb_bb_bb
 `;
 
+const Cross =`Cross
+____bbb____
+_bbbbbbbbbb
+bbbbbbbbbb_
+___bbb_____
+___bbb_____
+__bbb______
+__bbb______
+`;
+
+
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
 function DecodeRle(rle,w=11)
@@ -138,10 +149,12 @@ function DecodeRle(rle,w=11)
 
 function EncodeSpriteToRle(SpriteString)
 {
-	let rle = ``;
-	let Width = SpriteString.split('\n').length;
-	console.log(`Sprite Width ${Width}`);
 	let Rows = SpriteString.split('\n');
+	let Name = Rows.shift();
+	
+	let rle = ``;
+	let Width = Rows[0].length;
+	console.log(`Sprite ${Name} Width ${Width}`);
 	Rows = Rows.map( str => str.split('').map(c => c=='_'?'a':c).join('') );
 	let CharString = Rows.join('');
 	console.log(`CharString=${CharString}`);
@@ -167,13 +180,35 @@ function EncodeSpriteToRle(SpriteString)
 	}
 	EndCurrent();
 	
+	
+	const Output = {};
+	Output.Name = Name;
+	Output.Rle = rle;
 	//	want to output coords
 	console.log(`RLE:${rle}`);
-	
+	//	verify output
 	console.log( DecodeRle(rle) );
+	return Output;
 }
 
-EncodeSpriteToRle(Ghost);
+function EncodeSpritesToCode(Sprites)
+{
+	Sprites = Array.from(arguments);
+	const SpriteDatas = Sprites.map(EncodeSpriteToRle);
+	
+	function DataToCode(NameAndRle)
+	{
+		const Rle = NameAndRle.Rle;
+		const Name = NameAndRle.Name;
+		return `	"${Rle}", //	${Name}\n`;
+	}
+	
+	const SpriteCode = SpriteDatas.map(DataToCode).join('');
+	let Code = `const Sprites = [\n${SpriteCode}];`;
+	console.log(Code);
+}
+	
+EncodeSpritesToCode(Ghost,Cross);
 
 </script>
 
