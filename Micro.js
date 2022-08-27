@@ -19,6 +19,12 @@ let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
 
+const Sprites = [
+	"a2b7a3b9a1b2a1b5a1b4a1b5a1b59a1b2a1b2a1b2", //	Ghost
+	"a5b2a6b7a6b2a9b2a8b2a9b2a6", //	Cross
+];
+
+
 const Macros =
 {
 	INTROY:0.1,
@@ -27,14 +33,18 @@ const Macros =
 	LIGHTRAD:20.01,
 	PI:3.1415926538,
 	SPRITEWIDTH:11,
+	SPRITECOUNT:Sprites.length,
 	DATAWIDTH:128,
-	DATAHEIGHT:128,
+	DATAHEIGHT:256,
 	MAX_PROJECTILES:50,
 	TIMESTEP:0.016666,
 	FLOORY:0.0,
 	NEARFLOORY:0.05,
 	CUBESIZE:0.06,
-	HALFCUBESIZE:0.03
+	HALFCUBESIZE:0.03,
+	STATIC:0,
+	DEBRIS:1,
+	SPRITE0:2,
 };
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
@@ -44,8 +54,6 @@ function PadArray(a,Length,Fill)
 	while(a.length<Length)	a.push(Fill);
 	return a;
 }
-
-const Sprites = PadArray([`a2b7a3b9a1b2a1b5a1b4a1b5a1b59a1b2a1b2a1b2`],DATAHEIGHT,``);
 
 function PadPixels(a)
 {
@@ -131,23 +139,34 @@ function RleToRgba(rle,i,a,w=SPRITEWIDTH)
 	return rle.split``.map((v,i)=>[i%w,i/w>>0,parseInt(v,36)-10,1]).filter(p=>!!p[2]);
 }
 
+function InitVelocityPixel(_,i)
+{
+	let x = i % DATAWIDTH;
+	let y = (i/DATAWIDTH)>>0;
+	return [0,0,0,y];
+}
+
+function InitPositionPixel()
+{
+	let InitMin = [-WorldSize,1,-WorldSize,0];
+	let InitMax = [WorldSize,1,WorldSize,1];
+	return InitMin.map( (Min,i) => lerp(Min,InitMax[i]) );
+}
+
+
+
 export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
 	rc = new RenderContext_t(Canvas);
 	Desktop = new DesktopXr(Canvas);
 	
-	
 	//	load sprites into pixels
-	let PixelRows = Sprites.map(RleToRgba).map(PadPixels);
+	let PixelRows = PadArray(Sprites,DATAHEIGHT,``).map(RleToRgba).map(PadPixels);
 	PixelRows = new Float32Array( PixelRows.flat(2) );
 	
-	let InitMin = [-WorldSize,1,-WorldSize,0];
-	let InitMax = [WorldSize,1,WorldSize,1];
-	//let InitMin = [-2,4,-2,0];
-	//let InitMax = [2,2,2,1];
-	AllocTextures(PositionTextures,InitMin,InitMax);
-	AllocTextures(VelocityTextures,[0,0,0,2],[0,0,0,2]);
-	AllocTextures(SpriteTextures,0,0,PixelRows);
+	AllocTextures(PositionTextures,InitPositionPixel);
+	AllocTextures(VelocityTextures,InitVelocityPixel);
+	AllocTextures(SpriteTextures,PixelRows);
 
 	function Tick()
 	{
@@ -158,9 +177,15 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		
 		Canvas.width = Canvas.getBoundingClientRect().width;
 		Canvas.height = Canvas.getBoundingClientRect().height;
+
+		Blit(VelocityTextures,rc.PhysicsVelocityShader);
+		Blit(PositionTextures,rc.PhysicsPositionShader);
+		//	gr: something wrong here
+		//if ( TickCount == 0 )
+		//	Blit(PositionTextures,rc.PhysicsPositionShader);
+
 		Render(Canvas.width,Canvas.height);
-		//	debug to screen
-		RenderPhysics();
+
 		
 		//RenderPhysics([Canvas.width,Canvas.height]);
 		PostFrame();
@@ -239,19 +264,13 @@ function InitTexture()
 }
 
 
-function AllocTextures(Textures,InitMin,InitMax,PixelData)
+function AllocTextures(Textures,PixelData)
 {
 	Textures.push(null,null);
 	
-	//	todo: this will move to shader for init and maybe then dont need any texture initialisation code
-	function InitPosition(x,Index)
-	{
-		//if ( Index < MAX_PROJECTILES )	return [0,0,0,0];
-		return InitMin.map( (Min,i) => lerp(Min,InitMax[i]) );
-	}
 	const Width = DATAWIDTH;
 	const Height = DATAHEIGHT;
-	PixelData = PixelData || new Float32Array(new Array(Width*Height).fill().map(InitPosition).flat(2));
+	PixelData = typeof PixelData!='function' ? PixelData : new Float32Array(new Array(Width*Height).fill().map(PixelData).flat(2));
 	
 	const SourceFormat = gl.RGBA;
 	const SourceType = gl.FLOAT;
@@ -327,25 +346,17 @@ function Render(w,h)
 }
 
 
-function Blit(ScreenSize,Textures,Shader)
+function Blit(Textures,Shader)
 {
 	//	swap
 	Textures.reverse();
 	
-	const Target = ScreenSize ? null : Textures[NEW];
-	ScreenSize = ScreenSize || Target.Size;
+	const Target = Textures[NEW];
+	let ScreenSize = Target.Size;
 	
-	if ( Target )
-	{
-		//	render to texture
-		gl.bindFramebuffer( gl.FRAMEBUFFER, TextureTarget );
-		gl.bindTexture( gl.TEXTURE_2D, null );
-		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, Target, 0 );
-	}
-	else
-	{
-		gl.bindFramebuffer( gl.FRAMEBUFFER, null );
-	}
+	gl.bindFramebuffer( gl.FRAMEBUFFER, TextureTarget );
+	gl.bindTexture( gl.TEXTURE_2D, null );
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, Target, 0 );
 	
 	gl.viewport(0,0,...ScreenSize);
 	gl.clearColor(1,0,0,1);
@@ -357,21 +368,14 @@ function Blit(ScreenSize,Textures,Shader)
 	gl.useProgram( Shader );
 
 	SetUniformVector( Shader,'Time',[GetTime()]);
-	if ( Target )
-	{
-		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[OLD]);
-		SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[OLD]);
-		if ( Target != PositionTextures[NEW] )
-			SetUniformTexture( Shader,'NewPositions',2,PositionTextures[NEW]);
-		else
-			SetUniformTexture( Shader,'NewPositions',2,PositionTextures[OLD]);
-		SetUniformTexture( Shader,'SpritePositions',3,SpriteTextures[0]);
-	}
+
+	SetUniformTexture( Shader,'OldPositions',0,PositionTextures[OLD]);
+	SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[OLD]);
+	if ( Target != PositionTextures[NEW] )
+		SetUniformTexture( Shader,'NewPositions',2,PositionTextures[NEW]);
 	else
-	{
-		SetUniformTexture( Shader,'OldPositions',0,PositionTextures[NEW]);
-		SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[NEW]);
-	}
+		SetUniformTexture( Shader,'NewPositions',2,PositionTextures[OLD]);
+	SetUniformTexture( Shader,'SpritePositions',3,SpriteTextures[0]);
 	SetUniformVector(Shader,'ProjectilePos',ProjectilePos.flat(4));
 	SetUniformVector(Shader,'ProjectileVel',ProjectileVel.flat(4));
 	SetUniformVector(Shader,'Random4',[lerp(),lerp(),lerp(),lerp()])
@@ -379,9 +383,3 @@ function Blit(ScreenSize,Textures,Shader)
 	gl.drawArrays( gl.TRIANGLE_FAN, 0, 4 );
 }
 
-
-function RenderPhysics(ScreenSize)
-{
-	Blit(ScreenSize,VelocityTextures,rc.PhysicsVelocityShader);
-	Blit(ScreenSize,PositionTextures,rc.PhysicsPositionShader);
-}

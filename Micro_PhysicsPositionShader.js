@@ -1,14 +1,37 @@
-export const SpriteMeta =
+export const NmeMeta =
 `
-#define SpriteIndex	(1.0+floor(gl_FragCoord.y/6.0))
-#define SpriteDepth	(mod(gl_FragCoord.y,6.0))
+#define			FragIndex	(int(gl_FragCoord.x) + (int(gl_FragCoord.y)*DATAWIDTH))
+
+#define dataFetch(t)	texelFetch(t,ivec2(gl_FragCoord),0)
+
+//#define NmeDepth	(mod(gl_FragCoord.y,1.0))
+#define NmeDepth	1.0
 #define TimeOff		( Time==0.0 ? 0.0 : 100000.0 )
 #define TimePause	( Time < INTROMS ? 0.01 : 1.0 )
-#define SpriteTime	(( (TimeOff+Time) * (SpriteIndex/100.0) + SpriteIndex*37.47 )*TimePause)
-#define SinTimef(Speed)	( fract(SpriteTime/Speed) * PI * 2.0 )
+#define NmeTime		(( (TimeOff+Time) * (NmeIndexf/100.0) + NmeIndexf*37.47 )*TimePause)
+#define SinTimef(Speed)	( fract(NmeTime/Speed) * PI * 2.0 )
 #define AnimOff		vec3( 2.5*cos(SinTimef(480.0)), 2.3*sin(SinTimef(400.0)), 2.8*cos(SinTimef(300.0)) )
-#define Spritexyz	vec3(-10.0+SpriteIndex*1.1,3,-7.0+SpriteDepth*CUBESIZE*1.3)+AnimOff
-#define SpriteTrans mat4( vec4(0.1,0,0,0),	vec4(0,-0.1,0,0),	vec4(0,0,0.1,0),	vec4(Spritexyz,1) )
+//#define AnimOff		vec3(0)
+#define Nmexyz		vec3(-10.0+NmeIndexf*1.1,3,-3.0+NmeDepth*CUBESIZE*1.3)+AnimOff
+#define NmeTrans	mat4( vec4(0.1,0,0,0),	vec4(0,-0.1,0,0),	vec4(0,0,0.1,0),	vec4(Nmexyz,1) )
+#define Spriteuv	ivec2( gl_FragCoord.x, SpriteIndex )
+
+#define Row				int(gl_FragCoord.y)
+#define IsProjectile	(Row==0)
+#define NmeIndex		(Row-1)
+#define NmeIndexf		float(NmeIndex)
+#define Type			Vel4.w
+#define Typei			int(Vel4.w)
+#define Type_IsStatic	(Typei==STATIC)
+#define Type_IsDebris	(Typei==DEBRIS)
+#define Type_IsSprite	(Typei>=SPRITE0)
+#define SpriteIndex		((Typei-SPRITE0)%SPRITECOUNT)
+
+uniform float Time;
+#define FirstFrame		(Time==0.0)
+#define RAND1			(Pos4.w)
+#define UP				vec3(0,1,0)
+#define INITIAL_POS_RANDOMNESS	0.0002
 `;
 
 export const Vert =
@@ -30,36 +53,34 @@ uniform sampler2D OldPositions;
 uniform sampler2D OldVelocitys;
 uniform vec4 ProjectileVel[MAX_PROJECTILES];
 uniform vec4 ProjectilePos[MAX_PROJECTILES];
-#define			FragIndex	(int(gl_FragCoord.x) + (int(gl_FragCoord.y)*DATAWIDTH))
 
 uniform sampler2D SpritePositions;
 
-uniform float Time;
-${SpriteMeta}
+${NmeMeta}
 
 void main()
 {
-	vec4 Vel = texelFetch(OldVelocitys,ivec2(gl_FragCoord),0);
-	Colour = texelFetch(OldPositions,ivec2(gl_FragCoord),0);
+	vec4 Vel4 = dataFetch(OldVelocitys);
+	Colour = dataFetch(OldPositions);
 	vec3 xyz = Colour.xyz;
 
-	xyz += Vel.xyz * TIMESTEP;
+	xyz += Vel4.xyz * TIMESTEP;
 	
 	//	stick to floor
 	xyz.y = max( xyz.y, float(FLOORY) );
+
+	//	initialise close to pos
+	if ( /*FragIndex >= MAX_PROJECTILES &&*/ FirstFrame )
+	{
+		vec4 NmePos = NmeTrans * texelFetch( SpritePositions, Spriteuv, 0 );
+		//NmePos.y = float(INTROY);
+		xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
+	}
 
 	//	new projectile data
 	if ( FragIndex < MAX_PROJECTILES && ProjectilePos[FragIndex].w > 0.0 )
 		xyz = ProjectilePos[FragIndex].xyz;
 
-	//	initialise close to pos
-	if ( FragIndex >= MAX_PROJECTILES && Time == 0.0 )
-	{
-		ivec2 Spriteuv = ivec2( gl_FragCoord.x, 0 );
-		vec4 SpritePos = SpriteTrans * texelFetch( SpritePositions, Spriteuv, 0 );
-		SpritePos.y = float(INTROY);
-		xyz = mix(xyz,SpritePos.xyz, 0.99);
-	}
 	Colour.xyz = xyz;
 }
 `;

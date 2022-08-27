@@ -1,5 +1,5 @@
-export {Vert,SpriteMeta} from './Micro_PhysicsPositionShader.js'
-import {SpriteMeta} from './Micro_PhysicsPositionShader.js'
+export {Vert,NmeMeta} from './Micro_PhysicsPositionShader.js'
+import {NmeMeta} from './Micro_PhysicsPositionShader.js'
 
 export const Frag =
 `out vec4 Colour;
@@ -11,8 +11,6 @@ uniform sampler2D SpritePositions;
 uniform vec4 ProjectileVel[MAX_PROJECTILES];
 uniform vec4 ProjectilePos[MAX_PROJECTILES];
 
-#define			FragIndex	(int(gl_FragCoord.x) + (int(gl_FragCoord.y)*DATAWIDTH))
-#define			Type		Vel4.w
 uniform vec4	Random4;
 
 const float AirDrag = 0.01;
@@ -77,47 +75,40 @@ vec3 hash32(vec2 p)
 	return fract((p3.xxy+p3.yzz)*p3.zyx);
 }
 
-#define UP		vec3(0,1,0)
-//	static 0
-//	debris 1
-//	spriteN
-#define MOVING	(Type==1.0?1.0:0.0)
-#define ISSPRITE	(Type==2.0)
+//#define MOVINGf	(Type_IsDebris?1.0:0.0)
+#define MOVINGf	(Type_IsStatic?0.0:1.0)
 
-uniform float Time;
-${SpriteMeta}
+${NmeMeta}
 
 void main()
 {
-	ivec2 Spriteuv = ivec2( gl_FragCoord.x, 0 );
-	//vec4 SpritePos = texelFetch( SpritePositions, Spriteuv, 0 ) * SpriteTrans;
-	vec4 SpritePos = SpriteTrans * texelFetch( SpritePositions, Spriteuv, 0 );
-
-	vec4 Vel4 = texelFetch( OldVelocitys, ivec2(gl_FragCoord), 0 );
-	vec4 Pos4 = texelFetch( NewPositions, ivec2(gl_FragCoord), 0 );
+	vec4 Vel4 = dataFetch(OldVelocitys);
+	vec4 Pos4 = dataFetch(NewPositions);
 	vec3 Vel = Vel4.xyz;
 	vec3 xyz = Pos4.xyz;
-	float RAND1 = Pos4.w;
+
+	vec4 NmePos = NmeTrans * texelFetch( SpritePositions, Spriteuv, 0 );
 
 	//	new projectile data
 	if ( FragIndex < MAX_PROJECTILES && ProjectileVel[FragIndex].w > 0.0 )
 	{
 		Vel = ProjectileVel[FragIndex].xyz;
-		Type = 1.0;
+		Type = float(DEBRIS);
 	}
 
 	Vel *= 1.0 - AirDrag;
-	Vel.y += MOVING * -GravityY * TIMESTEP;
+	Vel.y += MOVINGf * -GravityY * TIMESTEP;
 
 
-	//	spring to sprite
-	if ( FragIndex>=MAX_PROJECTILES && ISSPRITE )
+	//	spring to sprite position
+	if ( FragIndex>=MAX_PROJECTILES && Type_IsSprite )
 	{
 		if ( Time < INTROMS )	Vel *= 0.48;
 		if ( Time > INTROMS )	Vel *= 0.95;
 		float Speed = Time < INTROMS ? 3.0 : 4.1;
-		vec3 Delta = SpritePos.xyz - xyz;
-		Delta = normalize(Delta) * min( length(Delta), Speed );
+		vec3 Delta = NmePos.xyz - xyz;
+		if ( length(Delta) > 0.0 )
+			Delta = normalize(Delta) * min( length(Delta), Speed );
 		Vel += Delta;
 	}
 
@@ -147,7 +138,7 @@ void main()
 		Vel = normalize( normalize(ppv) + normalize(RandDir) );
 		Vel *= pplen * 0.4;
 
-		Type = 1.0;
+		Type = float(DEBRIS);
 	}
 
 	if ( xyz.y <= float(FLOORY) )
@@ -159,7 +150,7 @@ void main()
 		if ( length(Vel) < GravityY*6.0*TIMESTEP )
 		{
 			Vel = vec3(0);
-			Type = 0.0;
+			Type = float(STATIC);
 		}
 	}
 

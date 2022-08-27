@@ -1,3 +1,4 @@
+import {NmeMeta} from './Micro_PhysicsPositionShader.js'
 export const Vert =
 `out float FragCubeIndex;
 out vec3 FragWorldPosition;
@@ -9,47 +10,12 @@ uniform sampler2D PositionsTexture;
 uniform sampler2D OldPositionsTexture;
 uniform sampler2D NewVelocitys;
 
-#define ENABLE_SUPER_SMALL
-
-
-
-#if defined(ENABLE_SUPER_SMALL)
 vec3 GetLocalPosition(int v)
 {
 	v*=3;
 	int x = ivec4(915775499,923195439,642272978,49129)[v/30]>>v%30;
 	return sign(vec3(x&1,x&2,x&4));
 }
-#else
-
-//	get 0..1 cube model position
-vec3 GetLocalPosition(int CubeVertexIndex)
-{
-	int CubeVertexIndexComponent = CubeVertexIndex*3;
-	//	gr: integers are shorter than hex! https://twitter.com/SN74HC00/status/1559481497349914624
-	ivec4 VertexPositions30s = ivec4(0x3695a00b,0x3706d82f,0x26484ed2,0xbfe9);
-	int ChunkIndex = int( CubeVertexIndexComponent / 30 );
-	int BitIndex = CubeVertexIndexComponent % 30;
-	int Value32 = VertexPositions30s[ChunkIndex];
-	int xyz = Value32 >> BitIndex;
-	//	gr: this would be shorter, but div executed first!
-	//return vec3(xyz&1,xyz&2/2,xyz&4/4);
-	return sign(vec3(xyz&1,xyz&2,xyz&4));	//	sign turns 1,2,4 into 1,1,1
-/*
-	Value32 >>= BitIndex;
-	int x = Value32 & 1;
-	int y = Value32 & 2;
-	int z = Value32 & 4;
-	return vec3(x,y,z)/vec3(1,2,4);
-*/
-/*
-	int x = (Value32>>BitIndex) & 1;
-	int y = (Value32>>BitIndex+1) & 1;
-	int z = (Value32>>BitIndex+2) & 1;
-	return vec3(x,y,z);
-*/
-}
-#endif
 
 #define FloorCubeSize (FLOORSIZE/CUBESIZE)
 #define FloorTransform	mat4( vec4(FloorCubeSize,0,0,0),	vec4(0,1,0,0),	vec4(0,0,FloorCubeSize,0),	vec4(0,float(FLOORY)-CUBESIZE,0,1) )
@@ -136,33 +102,47 @@ void main()
 `;
 
 export const Frag =
-`out vec4 OutFragColor;
+`out vec4 FragColor;
 in float FragCubeIndex;
 in vec3 FragWorldPosition;
 in vec4 Velocity;
 vec4 Light = vec4(0,0,0,LIGHTRAD);
 
+#define DEBUG_COLOURS	false
+#define FLOOR_COLOUR	vec3(0.1)
+${NmeMeta}
+
 void main()
 {
-	int Type = int(Velocity.w);
+	FragColor.w = 1.0;
+	vec4 Vel4 = Velocity;
+	if ( DEBUG_COLOURS )
+	{
+		FragColor = vec4(1,0,1,1);
+		if ( Type_IsStatic )	FragColor = vec4(0,0,1,1);
+		if ( Type_IsDebris )	FragColor = vec4(1,0,0,1);
+		if ( Type_IsSprite )	FragColor = vec4(0,1,0,1);
+		return;
+	}
+
 	float r = mod(FragCubeIndex,1234.0)/1000.0;
 	float g = mod(FragCubeIndex,100.0)/100.0;
 	float b = mod(FragCubeIndex,7777.0)/7777.0;
-	OutFragColor = vec4(r,g*0.3,b,1);
+	FragColor.xyz = mix(vec3(0.1),vec3(1,1,1),vec3(r,g,b));
 	if ( int(FragCubeIndex) < MAX_PROJECTILES )
-		OutFragColor = vec4(0,1,0,1);
+		FragColor = vec4(0.06,0.8,0.06,1);
+
 	if ( int(FragCubeIndex) == 127*127 )
-		OutFragColor.xyz = vec3(0.1);
+	{
+		FragColor.xyz = FLOOR_COLOUR;
+		Vel4 = vec4(0);
+	}
 
 	float Lit = length(FragWorldPosition-Light.xyz)/Light.w;
 	Lit = Lit < 1.0 ? 1.0 : 0.2;
-	OutFragColor.xyz *= vec3(Lit);
+	Lit += min(9.9,length(Vel4.xyz)/4.0);
 
-	//OutFragColor = (Type==0) ? vec4(1,0,0,1) : vec4(0,1,0,1);
-	//if ( int(FragCubeIndex) == 127*127 )
-	//	OutFragColor.xyz = vec3(0);
-
-	//OutFragColor = texture(PositionsTexture,vec2(0));
+	FragColor.xyz *= vec3(Lit);
 }
 `;
 
