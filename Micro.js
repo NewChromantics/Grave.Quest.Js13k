@@ -70,18 +70,27 @@ function PadArray(a,Length,Fill)
 	return a;
 }
 
-function PadPixels(a)
+function PadPixels(a,i,_,w=DATAWIDTH)
 {
-	while(a.length<DATAWIDTH)	a.push(...a);
-	return a.slice(0,DATAWIDTH);
+	while(a.length<w)	a.push(...a);
+	return a.slice(0,w);
 }
 
-//	set w to 1 when new data
-let ProjectileIndex = 0;
-let ProjectilePos = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
-let ProjectileVel = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
-let WorldNear = 0;
+function InitArray(sz,init)
+{
+	return Array(sz).fill().map(init);
+}
 
+function Make04()
+{
+	return InitArray(MAX_PROJECTILES,x=>[0,0,0,0]);
+}
+
+let ProjectileIndex = 0;
+//	set w to 1 when new data
+let ProjectilePos = Make04();
+let ProjectileVel = Make04();
+let ClearColour=[0.1, 0.05, 0.3, 1.0];
 
 let Desktop;
 let FireRepeatMs = 40;
@@ -175,13 +184,8 @@ function InitVelocityPixel(_,i)
 	let MapSprites = ArrayFromTo(-3,-17);
 	//let MapSprite = MapSprites[lerp(0,MapSprites.length)>>0];
 	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
-	
 	let x = i % DATAWIDTH;
 	let y = (i/DATAWIDTH)>>0;
-	//let Type = IsMap(y) ? -(SPRITE0+MapSprite) : SPRITE0;
-	//let Type = IsMap(y) ? MapSprite : SPRITE0;
-	//	gr: something about MapSprite from random is breaking things
-	//let Type = IsMap(y) ? -SPRITE0-1-(y%3) : SPRITE0;
 	let Type = IsMap(y) ? MapSprites[y%MapSprites.length] : SPRITE0;
 	return [0,0,0,Type];
 }
@@ -189,7 +193,7 @@ function InitVelocityPixel(_,i)
 let WORLDW = WORLDSIZE*0.7;
 let WorldMin = [-WORLDW,FLOORY,-WORLDSIZE*3,0];
 let WorldMax = [WORLDW,FLOORY,WORLDSIZE*0.4,1];
-let MapPositions = new Array(DATAHEIGHT).fill().map(RandomWorldPos);
+let MapPositions = InitArray(DATAHEIGHT,RandomWorldPos);
 
 function RandomWorldPos()
 {
@@ -245,30 +249,17 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 
 let WeaponLastFired = {};	//	[Input] = FiredTime
 
-function TransformPoint(Transform,x,y,z,w=1)
-{
-	return Transform.transformPoint(new DOMPoint(x,y,z,w));
-}
-
-function Set(Target,v)
-{
-	Target[0] = v.x;
-	Target[1] = v.y;
-	Target[2] = v.z;
-	Target[3] = 1;
-}
-
 function FireWeapon(Name,Transform)
 {
+	function TransformPoint(x,y,z,w=1)
+	{
+		let p = Transform.transformPoint(new DOMPoint(x,y,z,w));
+		return [p.x,p.y,p.z,1];
+	}
 	WeaponLastFired[Name] = GetTime();
-	
-	let Pos = TransformPoint( Transform, 0, 0, lerp(0,1) );
-	let Vel = TransformPoint( Transform, lerp(-1,1), lerp(0,0), lerp(50,60), 0 );
-	//Vel.y += lerp(6,8);
-	
-	Set( ProjectilePos[ProjectileIndex], Pos );
-	Set( ProjectileVel[ProjectileIndex], Vel );
-	ProjectileIndex = (ProjectileIndex+1) % MAX_PROJECTILES;
+	ProjectilePos[ProjectileIndex] = TransformPoint( 0, 0, lerp(0,1) );
+	ProjectileVel[ProjectileIndex++] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(50,60), 0 );
+	ProjectileIndex%=MAX_PROJECTILES;
 }
 
 function UpdateWeapon(Name,State)
@@ -286,27 +277,22 @@ function UpdateWeapon(Name,State)
 function Update()
 {
 	let Input = Desktop.GetInput();
-	//	update all the weapons
 	Object.entries(Input).forEach( e=>UpdateWeapon(...e) );
-	
 }
 
 function PostFrame()
 {
-	//	unset new projectile flags
-	for ( let i=0;	i<MAX_PROJECTILES;	i++ )
-	{
-		ProjectilePos[i][3] = 0;
-		ProjectileVel[i][3] = 0;
-	}
+	ProjectilePos.forEach(p=>p[3]=0);
+	ProjectileVel.forEach(p=>p[3]=0);
 }
 
 function InitTexture()
 {
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,gl.NEAREST);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,gl.NEAREST);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	let s=(p,v)=>gl.texParameteri(gl.TEXTURE_2D,p,v);
+	s(gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+	s(gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+	s(gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	s(gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 }
 
 
@@ -314,22 +300,21 @@ function AllocTextures(Textures,PixelData)
 {
 	Textures.push(null,null);
 	
-	const Width = DATAWIDTH;
-	const Height = DATAHEIGHT;
-	PixelData = typeof PixelData!='function' ? PixelData : new Float32Array(new Array(Width*Height).fill().map(PixelData).flat(2));
+	const w = DATAWIDTH;
+	const h = DATAHEIGHT;
+	PixelData = typeof PixelData!='function' ? PixelData : new Float32Array(InitArray(w*h,PixelData).flat(2));
 	
 	const SourceFormat = gl.RGBA;
 	const SourceType = gl.FLOAT;
 	const InternalFormat = gl.RGBA32F;	//	webgl2
-	const Rect = [0,0,Width,Height];
 
 	for ( let t of [OLD,NEW] )
 	{
 		Textures[t] = gl.createTexture();
-		Textures[t].Size = [Width,Height];
-		gl.activeTexture( gl.TEXTURE0 );
-		gl.bindTexture( gl.TEXTURE_2D, Textures[t] );
-		gl.texImage2D( gl.TEXTURE_2D, 0, InternalFormat, Width, Height, 0, SourceFormat, SourceType, PixelData );
+		Textures[t].Size = [w,h];
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D,Textures[t]);
+		gl.texImage2D(gl.TEXTURE_2D,0,InternalFormat,w,h,0,SourceFormat,SourceType,PixelData);
 		InitTexture();
 	}
 }
@@ -365,22 +350,26 @@ function SetUniformTexture(Name,TextureIndex,Texture)
 }
 
 
+function Pass(w,h)
+{
+	gl.viewport(0,0,w,h);
+	gl.disable(gl.CULL_FACE);
+}
+
 function Render(w,h)
 {
 	let Camera = Desktop.Camera;
-	
+
 	gl.bindFramebuffer( gl.FRAMEBUFFER, null );
-	const Viewport=[0,0,w/h,h/h];
-	gl.viewport(0,0,w,h);
-	gl.clearColor( 0.1, 0.05, 0.3, 1.0 );
+	Pass(w,h);
+	gl.clearColor(...ClearColour);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	gl.disable(gl.CULL_FACE);
 	gl.enable(gl.DEPTH_TEST);
 	
 	BindShader(rc.CubeShader);
 
 	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
-	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
+	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix([0,0,w/h,1]));
 	SetUniformVector('Time',[GetTime()]);
 	SetUniformTexture('PositionsTexture',0,PositionTextures[NEW]);
 	SetUniformTexture('OldPositionsTexture',1,PositionTextures[OLD]);
@@ -397,16 +386,11 @@ function Blit(Textures,Shader)
 	Textures.reverse();
 	
 	const Target = Textures[NEW];
-	let ScreenSize = Target.Size;
 	
 	gl.bindFramebuffer( gl.FRAMEBUFFER, TextureTarget );
 	gl.bindTexture( gl.TEXTURE_2D, null );
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, Target, 0 );
-	
-	gl.viewport(0,0,...ScreenSize);
-	gl.clearColor(1,0,0,1);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	gl.disable(gl.CULL_FACE);
+	Pass(...Target.Size);
 	gl.disable( gl.BLEND );
 
 	BindShader( Shader );
