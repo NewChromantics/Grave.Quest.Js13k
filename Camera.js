@@ -28,41 +28,8 @@ function Cross3(a0,a1,a2,b0,b1,b2)
 		];
 }
 
-function DegToRad(Deg)
-{
-	return Deg * (Math.PI / 180);
-}
-
-function RadToDeg(Rad)
-{
-	return Rad * (180 / Math.PI);
-}
-
-
-function GetMatrixTranslation(Matrix)
-{
-	let xyz = Matrix.slice(12,12+3);
-	let w = Matrix[15];
-	return xyz.map( v => v/w );
-}
-
-function SetMatrixTranslation(Matrix,x,y,z,w=1)
-{
-	Matrix[12] = x;
-	Matrix[13] = y;
-	Matrix[14] = z;
-	Matrix[15] = w;
-}
-
-
-function MatrixMultiply4x4(a,b)
-{
-	a = new DOMMatrix(a);
-	b = new DOMMatrix(b);
-	let mat = a.multiply(b);
-	return Array.from(mat.toFloat32Array());
-}
-
+const DegToRad = Math.PI / 180;
+const RadToDeg = 1/DegToRad;
 
 
 export default class Camera
@@ -91,7 +58,7 @@ export default class Camera
 			return this.ProjectionMatrix;
 		
 		const Aspect = ViewRect[2] / ViewRect[3];
-		let fy = 1.0 / Math.tan( DegToRad(this.FovVertical) / 2);
+		let fy = 1.0 / Math.tan( DegToRad*this.FovVertical / 2);
 		let fx = fy / Aspect;
 		
 		let Far = this.FarDistance;
@@ -191,8 +158,8 @@ export default class Camera
 		let Distance = Length3( ...Dir );
 		Dir = Normalise3( Dir );
 		
-		let Yaw = RadToDeg( Math.atan2( Dir[0], Dir[2] ) );
-		let Pitch = RadToDeg( Math.asin(-Dir[1]) );
+		let Yaw = RadToDeg * Math.atan2( Dir[0], Dir[2] );
+		let Pitch = RadToDeg * Math.asin(-Dir[1]);
 		let Roll = 0;
 		
 		return [Pitch,Yaw,Roll,Distance];
@@ -201,9 +168,9 @@ export default class Camera
 	//	opposite of SetOrbit
 	SetLookAtRotation(Pitch,Yaw,Roll,Distance)
 	{
-		let Pitchr = DegToRad(Pitch);
+		let Pitchr = DegToRad*Pitch;
 		let CosPitch = Math.cos(Pitchr);
-		let Yawr = DegToRad(Yaw);
+		let Yawr = DegToRad*Yaw;
 		let Delta =
 		[
 			Math.sin(Yawr) * CosPitch,
