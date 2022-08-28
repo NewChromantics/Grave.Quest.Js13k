@@ -71,7 +71,7 @@ void main()
 
 	if ( FirstFrame )
 	{
-		mat4 Trans = Type_IsSprite ? NmeTrans : SpriteMat( xyz,0.5 );
+		mat4 Trans = Type_IsSprite ? NmeTrans : SpriteMat( xyz,1.0 );
 		vec4 NmePos = Trans * texelFetch( SpritePositions, Spriteuv, 0 );
 		xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
 		if ( IsProjectile )

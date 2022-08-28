@@ -232,14 +232,12 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		Canvas.height = Canvas.getBoundingClientRect().height;
 
 		//	first frame needs to bake positions before velocity pass
-		if ( TickCount == 0 )
-			Blit(PositionTextures,rc.PhysicsPositionShader);
-
-		Blit(VelocityTextures,rc.PhysicsVelocityShader);
+		//if ( TickCount == 0 )
+			//Blit(PositionTextures,rc.PhysicsPositionShader);
+		if ( TickCount != 0 )
+			Blit(VelocityTextures,rc.PhysicsVelocityShader);
 		Blit(PositionTextures,rc.PhysicsPositionShader);
-
 		Render(Canvas.width,Canvas.height);
-
 		
 		//RenderPhysics([Canvas.width,Canvas.height]);
 		PostFrame();
