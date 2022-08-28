@@ -19,10 +19,11 @@ let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
 const Sprites = [
-	"a2b1a1b1a1b1a1b1a1b1a2b1a1b1a1b1a1b1a1b1a1b10a1b10a1b4a1b1a1b27a2b3a2b4a2b3a2b2a1b9a3b7a2", //	Ghost
+	"a2b1a1b1a1b1a1b1a1b1a2b1a1b1a1b1a1b1a1b1a1b10a1b10a1b4a1b1a1b16a3b2a3b3a3b2a3b3a2b3a2b2a1b9a3b7a2", //	Ghost
 	"a4b3a8b3a8b3a8b3a8b3a8b3a4b22a4b3a8b3a4", //	Cross
 	"b36a1b3a1b7a1b1a1b9a1b9a1b1a1b7a1b3a1b3a1b9a3b7a5b5a3", //	Grave
 	"a5b1a9b3a5b2a1b1a1b2a6b1a1b2a1b2a3b1a2b1a1b1a5b1a2b1a2b2a6b1a16", //	Grass
+	"a1b1a3b1a3b1a1b11a1b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b9a2b1a3b1a3b1a1b3a1b3a1b3a1b1a3b1a3b1a12", //	Fence
 ];
 
 
@@ -38,6 +39,7 @@ const Macros =
 	SPRITECOUNT:Sprites.length,
 	DATAWIDTH:128,
 	DATAHEIGHT:128,
+	DATALAST:127*127,
 	MAX_PROJECTILES:50,
 	TIMESTEP:0.016666,
 	FLOORY:0.0,
@@ -65,6 +67,7 @@ function PadPixels(a)
 	//a = a.length ? a : [[0,0,0,0]];
 	//return PadArray(a,DATAWIDTH,[0,0,0,0]);
 	while(a.length<DATAWIDTH)	a.push(...a);
+	//while(a.length<DATAWIDTH)	a.push([0,a.length,0,0]);
 	return a.slice(0,DATAWIDTH);
 }
 
@@ -148,13 +151,14 @@ function RleToRgba(rle,i,a,w=SPRITEWIDTH)
 
 function IsMap(Row)
 {
-	return Row > 40;
+	return true;
+	return Row > 4;
 }
 
 function InitVelocityPixel(_,i)
 {
 	//let MapSprites = [CROSS,GRAVE,GRASS];
-	let MapSprites = [-3,-4,-5];
+	let MapSprites = [-3,-4,-5,-6];
 	//let MapSprite = MapSprites[lerp(0,MapSprites.length)>>0];
 	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
 	
@@ -211,11 +215,12 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		Canvas.width = Canvas.getBoundingClientRect().width;
 		Canvas.height = Canvas.getBoundingClientRect().height;
 
+		//	first frame needs to bake positions before velocity pass
+		if ( TickCount == 0 )
+			Blit(PositionTextures,rc.PhysicsPositionShader);
+
 		Blit(VelocityTextures,rc.PhysicsVelocityShader);
 		Blit(PositionTextures,rc.PhysicsPositionShader);
-		//	gr: something wrong here
-		//if ( TickCount == 0 )
-		//	Blit(PositionTextures,rc.PhysicsPositionShader);
 
 		Render(Canvas.width,Canvas.height);
 
@@ -250,8 +255,8 @@ function FireWeapon(Name,Transform)
 	WeaponLastFired[Name] = GetTime();
 	
 	let Pos = TransformPoint( Transform, 0, 0, lerp(0,1) );
-	let Vel = TransformPoint( Transform, lerp(-1,1), lerp(-1,1), lerp(40,50), 0 );
-	Vel.y += lerp(6,8);
+	let Vel = TransformPoint( Transform, lerp(-1,1), lerp(0,0), lerp(50,60), 0 );
+	//Vel.y += lerp(6,8);
 	
 	Set( ProjectilePos[ProjectileIndex], Pos );
 	Set( ProjectileVel[ProjectileIndex], Vel );

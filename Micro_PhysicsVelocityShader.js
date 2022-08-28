@@ -75,8 +75,8 @@ vec3 hash32(vec2 p)
 	return fract((p3.xxy+p3.yzz)*p3.zyx);
 }
 
-//#define MOVINGf	(Type_IsDebris?1.0:0.0)
-#define MOVINGf	(Type_IsStatic?0.0:1.0)
+#define MOVINGf	(Type_IsDebris?1.0:0.0)
+//#define MOVINGf	(Type_IsStatic?0.0:1.0)
 
 ${NmeMeta}
 
@@ -86,6 +86,8 @@ void main()
 	vec4 Pos4 = dataFetch(NewPositions);
 	vec3 Vel = Vel4.xyz;
 	vec3 xyz = Pos4.xyz;
+
+	//if ( FirstFrame )	Vel = vec3(0);
 
 	vec4 NmePos = NmeTrans * texelFetch( SpritePositions, Spriteuv, 0 );
 
@@ -99,9 +101,14 @@ void main()
 	Vel *= 1.0 - AirDrag;
 	Vel.y += MOVINGf * -GravityY * TIMESTEP;
 
+	//	convert from static to nme
+	int MinNme = int(Time/1000.0);
+	if ( NmeIndex < MinNme )
+		Type = float(SPRITE0);
+
 
 	//	spring to sprite position
-	if ( FragIndex>=MAX_PROJECTILES && Type_IsSprite )
+	if ( !IsProjectile && Type_IsSprite )
 	{
 		if ( Time < INTROMS )	Vel *= 0.48;
 		if ( Time > INTROMS )	Vel *= 0.95;

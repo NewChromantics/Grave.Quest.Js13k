@@ -119,8 +119,8 @@ const Ghost =`Ghost
 __bbbbbbb__
 _bbbbbbbbb_
 bb__bbb__bb
-bb__bbb__bb
-bbbbbbbbbbb
+bb___bb___b
+bb___bb___b
 bbbbbbbbbbb
 _bbbb_b_bbb
 _bbbbbbbbbb
@@ -167,6 +167,23 @@ _bb_b_bb___
 ____bbb____
 _____b_____
 `;
+
+
+const Fence =`Fence
+___________
+_b___b___b_
+bbb_bbb_bbb
+_b___b___b_
+_bbbbbbbbb_
+_b___b___b_
+_b___b___b_
+_b___b___b_
+_b___b___b_
+_b___b___b_
+bbbbbbbbbbb
+_b___b___b_
+`;
+
 
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
@@ -241,7 +258,7 @@ function EncodeSpritesToCode(Sprites)
 	console.log(Code);
 }
 	
-EncodeSpritesToCode(Ghost,Cross,Grave,Grass);
+EncodeSpritesToCode(Ghost,Cross,Grave,Grass,Fence);
 
 </script>
 

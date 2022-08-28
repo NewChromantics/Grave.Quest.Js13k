@@ -23,7 +23,7 @@ vec3 GetLocalPosition(int v)
 
 mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 {
-	if ( CubeIndex == 127*127 )	return FloorTransform;
+	if ( CubeIndex == DATALAST )	return FloorTransform;
 
 	int u = CubeIndex % textureSize(PositionsTexture,0).x;
 	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
@@ -41,7 +41,7 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 }
 
 float VelocityStretch = 4.0;
-#define ENABLE_STRETCH	(CubeIndex < 127*127)
+#define ENABLE_STRETCH	(CubeIndex != DATALAST)
 //#define ENABLE_STRETCH	false
 
 vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPosition)
@@ -111,49 +111,44 @@ in vec4 Velocity;
 in float Rand1;
 vec4 Light = vec4(0,0,0,LIGHTRAD);
 
-#define DEBUG_COLOURS		false
-#define FLOOR_TILE_SIZE		0.7
+#define DEBUG_COLOURS		true
+#define FLOOR_TILE_SIZE		0.4
 #define FLOOR_COLOUR(Odd)	vec3(Odd?0.2:0.1)
 #define PROJECTILE_COLOUR	vec4(0.06,0.8,0.06,1);
 ${NmeMeta}
 
+
+
 void main()
 {
-	FragColor.w = 1.0;
 	vec4 Vel4 = Velocity;
-	if ( DEBUG_COLOURS )
-	{
-		FragColor = vec4(1,0,1,1);
-		if ( Type_IsStatic )	FragColor = vec4(0,0,1,1);
-		if ( Type_IsDebris )	FragColor = vec4(1,0,0,1);
-		if ( Type_IsSprite )	FragColor = vec4(0,1,0,1);
-		return;
-	}
+	vec3 rgb = vec3(1,0,1);
 
-	float r = mod(FragCubeIndex,1234.0)/1000.0;
-	float g = mod(FragCubeIndex,100.0)/100.0;
-	float b = mod(FragCubeIndex,7777.0)/7777.0;
- //FragColor.xyz = mix(vec3(0.9),vec3(1,1,1),vec3(r,g,b));
- FragColor.xyz = vec3(r,g,b);
-//FragColor.xyz = mix(vec3(0.7),vec3(1,1,1),Rand1);
-	if ( int(FragCubeIndex) < MAX_PROJECTILES )
+	ivec3 xz = ivec3(mod(FragWorldPosition/FLOOR_TILE_SIZE,vec3(2)));
+	vec3 SpookyColour = mod( vec3(FragCubeIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777);
+
+	if ( Type_IsStatic )	rgb = vec3(1);
+	if ( Type_IsDebris )	rgb = vec3(1,0,0);
+	if ( Type_IsSprite )	rgb = SpookyColour;
+	//if ( Type_IsSprite )	rgb = vec3(0,1,0);
+	if ( IsFloor )			rgb = FLOOR_COLOUR(xz.x==xz.z);
+	
+ 	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 		FragColor = PROJECTILE_COLOUR;
 
-	if ( int(FragCubeIndex) == 127*127 )
-	{
-		ivec3 xz = ivec3(mod(FragWorldPosition/FLOOR_TILE_SIZE,vec3(2)));
-		FragColor.xyz = FLOOR_COLOUR(xz.x==xz.z);
+	if ( IsFloor )
 		Vel4 = vec4(0);
-	}
 
-	float Lit = 1.0 - min(1.0,length(FragWorldPosition-Light.xyz)/Light.w);
-	
+	float Lit = 1.0;
+	//float Lit = 1.0 - min(1.0,length(FragWorldPosition-Light.xyz)/Light.w);
+	/*
 	//Lit *= Lit;
 	Lit*=4.0;
 	Lit = Lit < 1.0 ? 0.2 : 1.0;
 	Lit += min(9.9,length(Vel4.xyz)/4.0);
-
-	FragColor.xyz *= vec3(Lit);
+*/
+	rgb *= vec3(Lit);
+	FragColor = vec4(rgb,1);
 }
 `;
 
