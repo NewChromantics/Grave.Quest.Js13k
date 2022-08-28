@@ -73,10 +73,7 @@ function PadArray(a,Length,Fill)
 
 function PadPixels(a)
 {
-	//a = a.length ? a : [[0,0,0,0]];
-	//return PadArray(a,DATAWIDTH,[0,0,0,0]);
 	while(a.length<DATAWIDTH)	a.push(...a);
-	//while(a.length<DATAWIDTH)	a.push([0,a.length,0,0]);
 	return a.slice(0,DATAWIDTH);
 }
 
@@ -387,7 +384,7 @@ function Render(w,h)
 	gl.useProgram( Shader );
 
 	//	set uniforms
-	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.GetWorldToLocalMatrix());
+	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
 	SetUniformMat4(Shader,'CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
 	SetUniformVector(Shader,'Time',[GetTime()]);
 	

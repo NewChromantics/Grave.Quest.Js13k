@@ -30,27 +30,19 @@ function Cross3(a0,a1,a2,b0,b1,b2)
 
 const DegToRad = Math.PI / 180;
 const RadToDeg = 1/DegToRad;
-
+const Near = 0.01;
+const Far = 10000;
+const FovV = 45;
+const Up = [0,1,0];
 
 export default class Camera
 {
 	constructor()
 	{
-		this.FovVertical = 45;
-
-		this.Up = [0,1,0];
 		this.Position = [ 0,2,20 ];
 		this.LookAt = [ 0,0,0 ];
-		this.Rotation4x4 = undefined;		//	override rotation
-		this.ProjectionMatrix = undefined;	//	override projection matrix
-		
-		this.NearDistance = 0.01;
-		this.FarDistance = 10000;
 	}
-	
 		
-	//	GetOpencvProjectionMatrix but 4x4 with z correction for near/far
-	//	rename to CameraToScreen/View
 	GetProjectionMatrix(ViewRect)
 	{
 		//	overriding user-provided matrix
@@ -58,25 +50,21 @@ export default class Camera
 			return this.ProjectionMatrix;
 		
 		const Aspect = ViewRect[2] / ViewRect[3];
-		let fy = 1.0 / Math.tan( DegToRad*this.FovVertical / 2);
+		let fy = 1.0 / Math.tan( DegToRad*FovV / 2);
 		let fx = fy / Aspect;
 		
-		let Far = this.FarDistance;
-		let Near = this.NearDistance;
 		let Depth = (-Near-Far) / (Near-Far);
 		let DepthTrans = (2*Far*Near) / (Near-Far);
 		let s=0,cx=0,cy=0;
-		let Matrix =
-		[
+		return [
 			fx,s,cx,0,
 			0,fy,cy,0,
 			0,0,Depth,1,
 			0,0,DepthTrans,0
 		];
-		return Matrix;
 	}
 	
-	GetLocalRotationMatrix()
+	get LocalRotation4x4()
 	{
 		if ( this.Rotation4x4 )
 			return this.Rotation4x4;
@@ -89,7 +77,7 @@ export default class Camera
 		let center = ZForwardIsNegative ? this.Position : this.LookAt;
 		//	CreateLookAtRotationMatrix(eye,up,center)
 		let z = Normalise3( Subtract3( center, eye ) );
-		let x = Normalise3( Cross3( ...this.Up, ...z ) );
+		let x = Normalise3( Cross3( ...Up, ...z ) );
 		let y = Normalise3( Cross3( ...z,...x ) );
 		return [
 			x[0],	y[0],	z[0],	0,
@@ -99,30 +87,24 @@ export default class Camera
 		];
 	}
 
-	
-	GetWorldToLocalMatrix()
+	get WorldToLocal()
 	{
-		let Rotation = this.GetLocalRotationMatrix();
-		
 		//	to move from world space to camera space, we should take away the camera origin
 		//	so this should always be -pos
 		let Trans = this.Position.map( x=>-x );
 		let Translation = new DOMMatrix().translate(...Trans);
-		let WorldToCamera = new DOMMatrix(Rotation).multiply(Translation);
-		return WorldToCamera.toFloat32Array();
+		let WorldToCamera = new DOMMatrix(this.LocalRotation4x4).multiply(Translation);
+		return WorldToCamera;
 	}
 	
-	GetLocalToWorldMatrix()
+	get LocalToWorld()
 	{
-		let WorldToCameraMatrix = new DOMMatrix(this.GetWorldToLocalMatrix());
-		return WorldToCameraMatrix.inverse();
+		return this.WorldToLocal.inverse();
 	}
 	
 	GetWorldTransform(LocalOffset)
 	{
-		let LocalToWorld = this.GetLocalToWorldMatrix();
-		let Trans = LocalToWorld.translate(...LocalOffset);
-		return Trans;
+		return this.LocalToWorld.translate(...LocalOffset);
 	}
 	
 	//	get forward vector in world space
@@ -134,9 +116,8 @@ export default class Camera
 		if ( this.Rotation4x4 )
 		{
 			//let LookAtTrans = this.GetWorldTransform([0,0,-1]);
-			let LocalToWorld = this.GetLocalToWorldMatrix();
 			//	gr: why is this backwards...
-			LookAt = new DOMMatrix(LocalToWorld).transformPoint(new DOMPoint(0,0,-1));
+			LookAt = this.LocalToWorld.transformPoint(new DOMPoint(0,0,-1));
 		}
 			
 		let z = Subtract3( LookAt, this.Position );
@@ -150,7 +131,6 @@ export default class Camera
 	}
 	
 	
-	//	opposite of GetOrbit
 	GetLookAtRotation()
 	{
 		//	forward instead of backward
@@ -160,43 +140,36 @@ export default class Camera
 		
 		let Yaw = RadToDeg * Math.atan2( Dir[0], Dir[2] );
 		let Pitch = RadToDeg * Math.asin(-Dir[1]);
-		let Roll = 0;
-		
-		return [Pitch,Yaw,Roll,Distance];
+		return [Pitch,Yaw,0,Distance];
 	}
 	
-	//	opposite of SetOrbit
-	SetLookAtRotation(Pitch,Yaw,Roll,Distance)
+	SetLookAtRotation(p,y,r,d)
 	{
-		let Pitchr = DegToRad*Pitch;
-		let CosPitch = Math.cos(Pitchr);
-		let Yawr = DegToRad*Yaw;
+		p *= DegToRad;
+		let cp = Math.cos(p);
+		y *= DegToRad;
 		let Delta =
 		[
-			Math.sin(Yawr) * CosPitch,
-			-Math.sin(Pitchr),
-			Math.cos(Yawr) * CosPitch
+			Math.sin(y) * cp,
+			-Math.sin(p),
+			Math.cos(y) * cp
 		];
-		this.LookAt = this.Position.map( (p,i)=> p + Delta[i] * Distance );
+		this.LookAt = this.Position.map( (p,i)=> p + Delta[i] * d );
 	}
 	
-	//	better name! like... RotateLookAt
 	OnCameraFirstPersonRotate(x,y,z,FirstClick)
 	{
-		//	remap input from xy to yaw, pitch
-		let xyz = [y,x,z];
+		let yrp = [y,x,z];
 		
-		if ( FirstClick || !this.Last_FirstPersonPos )
+		if ( FirstClick || !this.LastyFpsPos )
 		{
-			this.Start_FirstPersonPyrd = this.GetLookAtRotation();
-			//Pop.Debug("this.Start_OrbitPyrd",this.Start_OrbitPyrd);
-			this.Last_FirstPersonPos = xyz;
+			this.StartPyrd = this.GetLookAtRotation();
+			this.LastyFpsPos = yrp;
 		}
 		
-		let Scale = 0.1;
-		let Delta = this.Last_FirstPersonPos.map( (x,i) => (x-xyz[i])*Scale );
+		let Delta = this.LastyFpsPos.map( (x,i) => (x-yrp[i])*0.1 );
 		Delta[3]=0;
-		let pyrd = this.Start_FirstPersonPyrd.map( (x,i) => x + Delta[i] );
+		let pyrd = this.StartPyrd.map( (x,i) => x + Delta[i] );
 		this.SetLookAtRotation( ...pyrd );
 	}
 }
