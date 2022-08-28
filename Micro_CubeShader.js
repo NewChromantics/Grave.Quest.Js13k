@@ -112,7 +112,8 @@ in float Rand1;
 vec4 Light = vec4(0,0,0,LIGHTRAD);
 
 #define DEBUG_COLOURS		false
-#define FLOOR_COLOUR		vec3(0.2)
+#define FLOOR_TILE_SIZE		0.7
+#define FLOOR_COLOUR(Odd)	vec3(Odd?0.2:0.1)
 #define PROJECTILE_COLOUR	vec4(0.06,0.8,0.06,1);
 ${NmeMeta}
 
@@ -133,13 +134,15 @@ void main()
 	float g = mod(FragCubeIndex,100.0)/100.0;
 	float b = mod(FragCubeIndex,7777.0)/7777.0;
  //FragColor.xyz = mix(vec3(0.9),vec3(1,1,1),vec3(r,g,b));
-FragColor.xyz = mix(vec3(0.7),vec3(1,1,1),Rand1);
+ FragColor.xyz = vec3(r,g,b);
+//FragColor.xyz = mix(vec3(0.7),vec3(1,1,1),Rand1);
 	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 		FragColor = PROJECTILE_COLOUR;
 
 	if ( int(FragCubeIndex) == 127*127 )
 	{
-		FragColor.xyz = FLOOR_COLOUR;
+		ivec3 xz = ivec3(mod(FragWorldPosition/FLOOR_TILE_SIZE,vec3(2)));
+		FragColor.xyz = FLOOR_COLOUR(xz.x==xz.z);
 		Vel4 = vec4(0);
 	}
 
@@ -148,7 +151,7 @@ FragColor.xyz = mix(vec3(0.7),vec3(1,1,1),Rand1);
 	//Lit *= Lit;
 	Lit*=4.0;
 	Lit = Lit < 1.0 ? 0.2 : 1.0;
-	//Lit += min(9.9,length(Vel4.xyz)/4.0);
+	Lit += min(9.9,length(Vel4.xyz)/4.0);
 
 	FragColor.xyz *= vec3(Lit);
 }
