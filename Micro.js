@@ -340,29 +340,29 @@ function BindShader(Shader)
 	gl.useProgram( BoundShader=Shader );
 }
 
-function ul(Program,Name)
+function ul(Name)
 {
-	return Program[Name] = Program[Name] || gl.getUniformLocation(Program,Name);
+	return BoundShader[Name] = BoundShader[Name] || gl.getUniformLocation(BoundShader,Name);
 }
 
-function SetUniformMat4(Program,Name,Value)
+function SetUniformMat4(Name,Value)
 {
-	gl.uniformMatrix4fv( ul(Program,Name),0,Value);
+	gl.uniformMatrix4fv( ul(Name),0,Value);
 }
 
-function SetUniformVector(Program,Name,Value)
+function SetUniformVector(Name,Value)
 {
 	let Length = Math.min( 4, Value.length );
 	let f = `uniform${Length}fv`;
-	gl[f]( ul(Program,Name), Value );
+	gl[f]( ul(Name), Value );
 }
 
-function SetUniformTexture(Program,Name,TextureIndex,Texture)
+function SetUniformTexture(Name,TextureIndex,Texture)
 {
 	let TextureValue = gl.TEXTURE0+TextureIndex;
 	gl.activeTexture( TextureValue );
 	gl.bindTexture( gl.TEXTURE_2D, Texture );
-	gl.uniform1iv( ul(Program,Name), [TextureIndex] );
+	gl.uniform1iv( ul(Name), [TextureIndex] );
 }
 
 
@@ -378,19 +378,17 @@ function Render(w,h)
 	gl.disable(gl.CULL_FACE);
 	gl.enable(gl.DEPTH_TEST);
 	
-	const Shader = rc.CubeShader;
-	//	bind shader
-	gl.useProgram( Shader );
+	BindShader(rc.CubeShader);
 
 	//	set uniforms
-	SetUniformMat4(Shader,'WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
-	SetUniformMat4(Shader,'CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
-	SetUniformVector(Shader,'Time',[GetTime()]);
+	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
+	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
+	SetUniformVector('Time',[GetTime()]);
 	
 	//	hardcoded texture slots
-	SetUniformTexture(Shader,'PositionsTexture',0,PositionTextures[NEW]);
-	SetUniformTexture(Shader,'OldPositionsTexture',1,PositionTextures[OLD]);
-	SetUniformTexture(Shader,'NewVelocitys',2,VelocityTextures[NEW]);
+	SetUniformTexture('PositionsTexture',0,PositionTextures[NEW]);
+	SetUniformTexture('OldPositionsTexture',1,PositionTextures[OLD]);
+	SetUniformTexture('NewVelocitys',2,VelocityTextures[NEW]);
 
 	
 	let Instances = PositionTextures[NEW].Size[0] * PositionTextures[NEW].Size[1];
@@ -417,21 +415,20 @@ function Blit(Textures,Shader)
 	gl.disable(gl.CULL_FACE);
 	gl.disable( gl.BLEND );
 
-	//	bind shader
-	gl.useProgram( Shader );
+	BindShader( Shader );
 
-	SetUniformVector( Shader,'Time',[GetTime()]);
+	SetUniformVector('Time',[GetTime()]);
 
-	SetUniformTexture( Shader,'OldPositions',0,PositionTextures[OLD]);
-	SetUniformTexture( Shader,'OldVelocitys',1,VelocityTextures[OLD]);
+	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
+	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
 	if ( Target != PositionTextures[NEW] )
-		SetUniformTexture( Shader,'NewPositions',2,PositionTextures[NEW]);
+		SetUniformTexture('NewPositions',2,PositionTextures[NEW]);
 	else
-		SetUniformTexture( Shader,'NewPositions',2,PositionTextures[OLD]);
-	SetUniformTexture( Shader,'SpritePositions',3,SpriteTextures[0]);
-	SetUniformVector(Shader,'ProjectilePos',ProjectilePos.flat(4));
-	SetUniformVector(Shader,'ProjectileVel',ProjectileVel.flat(4));
-	SetUniformVector(Shader,'Random4',[lerp(),lerp(),lerp(),lerp()])
+		SetUniformTexture('NewPositions',2,PositionTextures[OLD]);
+	SetUniformTexture('SpritePositions',3,SpriteTextures[0]);
+	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
+	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
+	SetUniformVector('Random4',[lerp(),lerp(),lerp(),lerp()])
 
 	gl.drawArrays( gl.TRIANGLE_FAN, 0, 4 );
 }
