@@ -118,26 +118,56 @@ EncodeCubeVertexes();
 const Ghost =`Ghost
 __bbbbbbb__
 _bbbbbbbbb_
-bb_bbbbb_bb
-bb_bbbbb_bb
+bb__bbb__bb
+bb__bbb__bb
 bbbbbbbbbbb
 bbbbbbbbbbb
 bbbbbbbbbbb
 bbbbbbbbbbb
 bbbbbbbbbbb
 bb_bb_bb_bb
+b__b___b__b
+b__b___b__b
 `;
 
 const Cross =`Cross
 ____bbb____
-_bbbbbbbbbb
-bbbbbbbbbb_
-___bbb_____
-___bbb_____
-__bbb______
-__bbb______
+____bbb____
+bbbbbbbbbbb
+bbbbbbbbbbb
+____bbb____
+____bbb____
+____bbb____
+____bbb____
+____bbb____
+____bbb____
 `;
 
+const Grave =`Grave
+___bbbbb___
+__bbbbbbb__
+_bbbbbbbbb_
+bbb_bbb_bbb
+bbbb_b_bbbb
+bbbbb_bbbbb
+bbbb_b_bbbb
+bbb_bbb_bbb
+bbbbbbbbbbb
+bbbbbbbbbbb
+bbbbbbbbbbb
+`;
+
+
+const Grass =`Grass
+___________
+_____b_____
+__b__b__bb_
+__b__b_b___
+___b_bb_bb_
+_bb_b_bb___
+____bbb____
+_____b_____
+`;
 
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
@@ -156,6 +186,7 @@ function EncodeSpriteToRle(SpriteString)
 	let Width = Rows[0].length;
 	console.log(`Sprite ${Name} Width ${Width}`);
 	Rows = Rows.map( str => str.split('').map(c => c=='_'?'a':c).join('') );
+	Rows.reverse();	//	flip so we dont have to invert y in shader
 	let CharString = Rows.join('');
 	console.log(`CharString=${CharString}`);
 	
@@ -184,8 +215,11 @@ function EncodeSpriteToRle(SpriteString)
 	const Output = {};
 	Output.Name = Name;
 	Output.Rle = rle;
-	//	want to output coords
-	console.log(`RLE:${rle}`);
+
+	let Decoded = DecodeRle(rle);
+	console.log(`${Name} RLE:${rle} PixelCount: ${Decoded.length}`);
+	if ( Decoded.length > 128 )
+		throw `Sprite too big!`;
 	//	verify output
 	console.log( DecodeRle(rle) );
 	return Output;
@@ -208,7 +242,7 @@ function EncodeSpritesToCode(Sprites)
 	console.log(Code);
 }
 	
-EncodeSpritesToCode(Ghost,Cross);
+EncodeSpritesToCode(Ghost,Cross,Grave,Grass);
 
 </script>
 

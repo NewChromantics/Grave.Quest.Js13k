@@ -3,6 +3,7 @@ export const Vert =
 `out float FragCubeIndex;
 out vec3 FragWorldPosition;
 out vec4 Velocity;
+out float Rand1;
 uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
 uniform float Time;
@@ -29,6 +30,7 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 
 	vec4 OldPosition4 = texelFetch( OldPositionsTexture, ivec2(u,v), 0 );
 	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 );
+	Rand1 = Position4.w;
 	vec3 WorldPosition = Position4.xyz;
 
 	mat4 Transform = mat4( 1,0,0,0,
@@ -106,10 +108,12 @@ export const Frag =
 in float FragCubeIndex;
 in vec3 FragWorldPosition;
 in vec4 Velocity;
+in float Rand1;
 vec4 Light = vec4(0,0,0,LIGHTRAD);
 
-#define DEBUG_COLOURS	false
-#define FLOOR_COLOUR	vec3(0.1)
+#define DEBUG_COLOURS		false
+#define FLOOR_COLOUR		vec3(0.2)
+#define PROJECTILE_COLOUR	vec4(0.06,0.8,0.06,1);
 ${NmeMeta}
 
 void main()
@@ -128,9 +132,10 @@ void main()
 	float r = mod(FragCubeIndex,1234.0)/1000.0;
 	float g = mod(FragCubeIndex,100.0)/100.0;
 	float b = mod(FragCubeIndex,7777.0)/7777.0;
-	FragColor.xyz = mix(vec3(0.1),vec3(1,1,1),vec3(r,g,b));
+ //FragColor.xyz = mix(vec3(0.9),vec3(1,1,1),vec3(r,g,b));
+FragColor.xyz = mix(vec3(0.7),vec3(1,1,1),Rand1);
 	if ( int(FragCubeIndex) < MAX_PROJECTILES )
-		FragColor = vec4(0.06,0.8,0.06,1);
+		FragColor = PROJECTILE_COLOUR;
 
 	if ( int(FragCubeIndex) == 127*127 )
 	{
@@ -138,9 +143,12 @@ void main()
 		Vel4 = vec4(0);
 	}
 
-	float Lit = length(FragWorldPosition-Light.xyz)/Light.w;
-	Lit = Lit < 1.0 ? 1.0 : 0.2;
-	Lit += min(9.9,length(Vel4.xyz)/4.0);
+	float Lit = 1.0 - min(1.0,length(FragWorldPosition-Light.xyz)/Light.w);
+	
+	//Lit *= Lit;
+	Lit*=4.0;
+	Lit = Lit < 1.0 ? 0.2 : 1.0;
+	//Lit += min(9.9,length(Vel4.xyz)/4.0);
 
 	FragColor.xyz *= vec3(Lit);
 }

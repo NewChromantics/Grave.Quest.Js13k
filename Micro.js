@@ -18,10 +18,11 @@ let VelocityTextures=[];
 let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
-
 const Sprites = [
-	"a2b7a3b9a1b2a1b5a1b4a1b5a1b59a1b2a1b2a1b2", //	Ghost
-	"a5b2a6b7a6b2a9b2a8b2a9b2a6", //	Cross
+	"b1a2b1a3b1a2b2a2b1a3b1a2b3a1b2a1b2a1b59a2b3a2b4a2b3a2b2a1b9a3b7a2", //	Ghost
+	"a4b3a8b3a8b3a8b3a8b3a8b3a4b22a4b3a8b3a4", //	Cross
+	"b36a1b3a1b7a1b1a1b9a1b9a1b1a1b7a1b3a1b3a1b9a3b7a5b5a3", //	Grave
+	"a5b1a9b3a5b2a1b1a1b2a6b1a1b2a1b2a3b1a2b1a1b1a5b1a2b1a2b2a6b1a16", //	Grass
 ];
 
 
@@ -31,11 +32,12 @@ const Macros =
 	INTROMS:2000.01,
 	FLOORSIZE:200.001,
 	LIGHTRAD:20.01,
+	WORLDSIZE:13.01,
 	PI:3.1415926538,
 	SPRITEWIDTH:11,
 	SPRITECOUNT:Sprites.length,
 	DATAWIDTH:128,
-	DATAHEIGHT:256,
+	DATAHEIGHT:128,
 	MAX_PROJECTILES:50,
 	TIMESTEP:0.016666,
 	FLOORY:0.0,
@@ -45,6 +47,9 @@ const Macros =
 	STATIC:0,
 	DEBRIS:1,
 	SPRITE0:2,
+	CROSS:1,
+	GRAVE:2,
+	GRASS:3,
 };
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
@@ -57,14 +62,16 @@ function PadArray(a,Length,Fill)
 
 function PadPixels(a)
 {
-	return PadArray(a,DATAWIDTH,[0,0,0,0]);
+	//a = a.length ? a : [[0,0,0,0]];
+	//return PadArray(a,DATAWIDTH,[0,0,0,0]);
+	while(a.length<DATAWIDTH)	a.push(...a);
+	return a.slice(0,DATAWIDTH);
 }
 
 //	set w to 1 when new data
 let ProjectileIndex = 0;
 let ProjectilePos = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
 let ProjectileVel = new Array(MAX_PROJECTILES).fill().map(x=>[0,0,0,0]);
-let WorldSize = 100;
 let WorldNear = 0;
 
 
@@ -139,18 +146,44 @@ function RleToRgba(rle,i,a,w=SPRITEWIDTH)
 	return rle.split``.map((v,i)=>[i%w,i/w>>0,parseInt(v,36)-10,1]).filter(p=>!!p[2]);
 }
 
+function IsMap(Row)
+{
+	return Row > 40;
+}
+
 function InitVelocityPixel(_,i)
+{
+	//let MapSprites = [CROSS,GRAVE,GRASS];
+	let MapSprites = [-3,-4,-5];
+	//let MapSprite = MapSprites[lerp(0,MapSprites.length)>>0];
+	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
+	
+	let x = i % DATAWIDTH;
+	let y = (i/DATAWIDTH)>>0;
+	//let Type = IsMap(y) ? -(SPRITE0+MapSprite) : SPRITE0;
+	//let Type = IsMap(y) ? MapSprite : SPRITE0;
+	//	gr: something about MapSprite from random is breaking things
+	//let Type = IsMap(y) ? -SPRITE0-1-(y%3) : SPRITE0;
+	let Type = IsMap(y) ? MapSprites[y%MapSprites.length] : SPRITE0;
+	return [0,0,0,Type];
+}
+
+let WorldMin = [-WORLDSIZE,FLOORY,-WORLDSIZE,0];
+let WorldMax = [WORLDSIZE,FLOORY,WORLDSIZE,1];
+let MapPositions = new Array(DATAHEIGHT).fill().map(RandomWorldPos);
+
+function RandomWorldPos()
+{
+	return WorldMin.map( (Min,i) => lerp(Min,WorldMax[i]) );
+}
+
+function InitPositionPixel(_,i)
 {
 	let x = i % DATAWIDTH;
 	let y = (i/DATAWIDTH)>>0;
-	return [0,0,0,y];
-}
-
-function InitPositionPixel()
-{
-	let InitMin = [-WorldSize,1,-WorldSize,0];
-	let InitMax = [WorldSize,1,WorldSize,1];
-	return InitMin.map( (Min,i) => lerp(Min,InitMax[i]) );
+	if ( IsMap(y) )
+		return MapPositions[y].slice(0,3).concat([Math.random()]);
+	return RandomWorldPos(_,i);
 }
 
 
@@ -161,7 +194,7 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	Desktop = new DesktopXr(Canvas);
 	
 	//	load sprites into pixels
-	let PixelRows = PadArray(Sprites,DATAHEIGHT,``).map(RleToRgba).map(PadPixels);
+	let PixelRows = PadArray(Sprites,DATAHEIGHT,`b1`).map(RleToRgba).map(PadPixels);
 	PixelRows = new Float32Array( PixelRows.flat(2) );
 	
 	AllocTextures(PositionTextures,InitPositionPixel);
