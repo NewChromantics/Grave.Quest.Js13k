@@ -4,15 +4,14 @@ export const NmeMeta =
 
 #define dataFetch(t)	texelFetch(t,ivec2(gl_FragCoord),0)
 
-#define SpriteMat(t,s)	mat4( vec4(CUBESIZE*s,0,0,0),	vec4(0,CUBESIZE*s,0,0),	vec4(0,0,CUBESIZE*s,0),	vec4(t,1) )
+#define SpriteMat(t,s)	mat4( vec4(-CUBESIZE*s,0,0,0),	vec4(0,CUBESIZE*s,0,0),	vec4(0,0,CUBESIZE*s,0),	vec4(t,1) )
 
 
 #define NmeDepth	NmeY
 #define NmeX		(mod(NmeIndexf,10.0))
 #define NmeY		(floor(NmeIndexf/10.0))
 #define TimeOff		( Time==0.0 ? 0.0 : 100000.0 )
-#define TimePause	( Time < INTROMS ? 0.01 : 1.0 )
-#define NmeTime		(( (TimeOff+Time) * (NmeIndexf/300.0) + NmeIndexf*37.47 )*TimePause)
+#define NmeTime		( (TimeOff+Time) * (NmeIndexf/700.0) + NmeIndexf*37.47 )
 #define SinTimef(Speed)	( fract(NmeTime/Speed) * PI * 2.0 )
 #define AnimOff		vec3( 2.5*cos(SinTimef(480.0)), max(1.0,2.3*sin(SinTimef(400.0))), 2.8*cos(SinTimef(300.0)) )
 //#define AnimOff		vec3(0)

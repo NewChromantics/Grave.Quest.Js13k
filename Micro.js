@@ -19,20 +19,29 @@ let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
 const Sprites = [
-	"a2b1a1b1a1b1a1b1a1b1a2b1a1b1a1b1a1b1a1b1a1b10a1b10a1b4a1b1a1b16a3b2a3b3a3b2a3b3a2b3a2b2a1b9a3b7a2", //	Ghost
-	"a4b3a8b3a8b3a8b3a8b3a8b3a4b22a4b3a8b3a4", //	Cross
-	"b36a1b3a1b7a1b1a1b9a1b9a1b1a1b7a1b3a1b3a1b9a3b7a5b5a3", //	Grave
-	"a5b1a9b3a5b2a1b1a1b2a6b1a1b2a1b2a3b1a2b1a1b1a5b1a2b1a2b2a6b1a16", //	Grass
-	"a1b1a3b1a3b1a1b11a1b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b9a2b1a3b1a3b1a1b3a1b3a1b3a1b1a3b1a3b1a12", //	Fence
+	"a13b1a1b1a1b1a1b1a1b1a2b1a1b1a1b1a1b1a1b1a1b10a1b10a1b4a1b1a1b16a3b2a3b3a3b2a3b3a2b3a2b2a1b9a3b7a2", //	Ghost
+	"a15b3a8b3a8b3a8b3a8b3a8b3a4b22a4b3a8b3a4", //	Cross
+	"a11b36a1b3a1b7a1b1a1b9a1b9a1b1a1b7a1b3a1b3a1b9a3b7a5b5a3", //	Grave
+	"a16b1a9b3a5b2a1b1a1b2a6b1a1b2a1b2a3b1a2b1a1b1a5b1a2b1a2b2a6b1a16", //	Grass
+	"a12b1a3b1a3b1a1b11a1b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b9a2b1a3b1a3b1a1b3a1b3a1b3a1b1a3b1a3b1a12", //	Fence
+	"a12b4a6b2a2b2a5b2a2b2a5b2a2b2a6b4a6", //	Num0
+	"a11b6a7b2a9b2a7b4a9b2a7", //	Num1
+	"a12b5a6b2a11b2a10b2a6b4a6", //	Num2
+	"a12b4a10b2a7b3a10b2a6b4a6", //	Num3
+	"a15b1a6b6a6b1a2b1a8b1a1b1a9b2a6", //	Num4
+	"a12b4a10b2a6b3a8b1a10b5a5", //	Num5
+	"a12b4a6b2a2b2a5b5a7b2a10b3a6", //	Num6
+	"a12b2a10b2a10b2a10b2a5b6a5", //	Num7
+	"a12b4a6b2a2b2a6b4a6b2a2b2a6b4a6", //	Num8
+	"a12b3a10b2a7b5a5b2a2b2a6b4a6", //	Num9
 ];
 
 
 const Macros =
 {
 	INTROY:0.1,
-	INTROMS:2000.01,
 	FLOORSIZE:200.001,
-	LIGHTRAD:20.01,
+	LIGHTRAD:30.01,
 	WORLDSIZE:13.01,
 	PI:3.1415926538,
 	SPRITEWIDTH:11,
@@ -146,7 +155,7 @@ class RenderContext_t
 function RleToRgba(rle,i,a,w=SPRITEWIDTH)
 {
 	rle = rle.replace(/(\w)(\d+)/g, (_,char,count)=>char.repeat(count));
-	return rle.split``.map((v,i)=>[i%w,i/w>>0,parseInt(v,36)-10,1]).filter(p=>!!p[2]);
+	return rle.split``.map((v,i)=>[i%w,i/w>>0,0,parseInt(v,36)-10]).filter(p=>!!p[3]);
 }
 
 function IsMap(Row)
@@ -155,10 +164,19 @@ function IsMap(Row)
 	return Row > 4;
 }
 
+function ArrayFromTo(s,e)
+{
+	let a=[];
+	for (;s!=e;s+=Math.sign(e-s) )
+		a.push(s);
+	return a;
+}
+
 function InitVelocityPixel(_,i)
 {
 	//let MapSprites = [CROSS,GRAVE,GRASS];
-	let MapSprites = [-3,-4,-5,-6];
+	//let MapSprites = [-3,-4,-5,-6, -7,-8];
+	let MapSprites = ArrayFromTo(-3,-17);
 	//let MapSprite = MapSprites[lerp(0,MapSprites.length)>>0];
 	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
 	
@@ -172,8 +190,9 @@ function InitVelocityPixel(_,i)
 	return [0,0,0,Type];
 }
 
-let WorldMin = [-WORLDSIZE,FLOORY,-WORLDSIZE,0];
-let WorldMax = [WORLDSIZE,FLOORY,WORLDSIZE,1];
+let WORLDW = WORLDSIZE*0.7;
+let WorldMin = [-WORLDW,FLOORY,-WORLDSIZE*3,0];
+let WorldMax = [WORLDW,FLOORY,WORLDSIZE*0.4,1];
 let MapPositions = new Array(DATAHEIGHT).fill().map(RandomWorldPos);
 
 function RandomWorldPos()

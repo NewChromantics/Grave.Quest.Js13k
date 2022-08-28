@@ -114,7 +114,7 @@ vec4 Light = vec4(0,0,0,LIGHTRAD);
 #define DEBUG_COLOURS		true
 #define FLOOR_TILE_SIZE		0.4
 #define FLOOR_COLOUR(Odd)	vec3(Odd?0.2:0.1)
-#define PROJECTILE_COLOUR	vec4(0.06,0.8,0.06,1);
+#define PROJECTILE_COLOUR	vec3(0.06,0.8,0.06)
 ${NmeMeta}
 
 
@@ -128,25 +128,27 @@ void main()
 	vec3 SpookyColour = mod( vec3(FragCubeIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777);
 
 	if ( Type_IsStatic )	rgb = vec3(1);
-	if ( Type_IsDebris )	rgb = vec3(1,0,0);
+	if ( Type_IsDebris )	rgb = SpookyColour;//vec3(1,0,0);
 	if ( Type_IsSprite )	rgb = SpookyColour;
 	//if ( Type_IsSprite )	rgb = vec3(0,1,0);
 	if ( IsFloor )			rgb = FLOOR_COLOUR(xz.x==xz.z);
 	
  	if ( int(FragCubeIndex) < MAX_PROJECTILES )
-		FragColor = PROJECTILE_COLOUR;
+		rgb = PROJECTILE_COLOUR;
 
 	if ( IsFloor )
 		Vel4 = vec4(0);
 
-	float Lit = 1.0;
-	//float Lit = 1.0 - min(1.0,length(FragWorldPosition-Light.xyz)/Light.w);
+	rgb *= mix(0.7,1.0,Rand1);
+
+	float Lit = 1.0 - min(1.0,length(FragWorldPosition-Light.xyz)/Light.w);
 	/*
 	//Lit *= Lit;
 	Lit*=4.0;
 	Lit = Lit < 1.0 ? 0.2 : 1.0;
-	Lit += min(9.9,length(Vel4.xyz)/4.0);
 */
+	Lit += min(9.9,length(Vel4.xyz)/4.0);
+
 	rgb *= vec3(Lit);
 	FragColor = vec4(rgb,1);
 }

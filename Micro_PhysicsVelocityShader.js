@@ -13,7 +13,6 @@ uniform vec4 ProjectilePos[MAX_PROJECTILES];
 
 uniform vec4	Random4;
 
-const float AirDrag = 0.01;
 const float FloorDragMin = 0.3;	//	less = more bounce
 const float FloorDragMax = 0.8;	//	less = more bounce
 const float GravityY = 16.0;
@@ -98,27 +97,27 @@ void main()
 		Type = float(DEBRIS);
 	}
 
-	Vel *= 1.0 - AirDrag;
-	Vel.y += MOVINGf * -GravityY * TIMESTEP;
+	float AirDrag = 0.01;
 
 	//	convert from static to nme
 	int MinNme = int(Time/1000.0);
-	if ( NmeIndex < MinNme )
+	if ( NmeIndex < MinNme && Type < 0.0 )
 		Type = float(SPRITE0);
 
 
 	//	spring to sprite position
 	if ( !IsProjectile && Type_IsSprite )
 	{
-		if ( Time < INTROMS )	Vel *= 0.48;
-		if ( Time > INTROMS )	Vel *= 0.95;
-		float Speed = Time < INTROMS ? 3.0 : 4.1;
+		Vel *= 0.95;
+		float Speed = 1.1;
 		vec3 Delta = NmePos.xyz - xyz;
 		if ( length(Delta) > 0.0 )
 			Delta = normalize(Delta) * min( length(Delta), Speed );
 		Vel += Delta;
 	}
 
+	Vel *= 1.0 - AirDrag;
+	Vel.y += MOVINGf * -GravityY * TIMESTEP;
 
 	//	collisions
 	if ( FragIndex>=MAX_PROJECTILES )

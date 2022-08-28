@@ -184,6 +184,86 @@ bbbbbbbbbbb
 _b___b___b_
 `;
 
+const Num0 =`Num0
+_bbbb_
+bb__bb
+bb__bb
+bb__bb
+_bbbb_
+`;
+
+const Num1 =`Num1
+__bb__
+bbbb__
+__bb__
+__bb__
+bbbbbb
+`;
+
+const Num2 =`Num2
+_bbbb_
+____bb
+___bb_
+_bb___
+_bbbbb
+`;
+
+const Num3 =`Num3
+_bbbb_
+____bb
+__bbb_
+____bb
+_bbbb_
+`;
+
+const Num4 =`Num4
+___bb_
+__b_b_
+_b__b_
+bbbbbb
+____b_
+`;
+
+const Num5 =`Num5
+_bbbbb
+_b____
+_bbb__
+____bb
+_bbbb_
+`;
+
+const Num6 =`Num6
+__bbb_
+_bb___
+bbbbb_
+bb__bb
+_bbbb_
+`;
+
+const Num7 =`Num7
+bbbbbb
+____bb
+___bb_
+__bb__
+_bb___
+`;
+
+const Num8 =`Num8
+_bbbb_
+bb__bb
+_bbbb_
+bb__bb
+_bbbb_
+`;
+
+const Num9 =`Num9
+_bbbb_
+bb__bb
+_bbbbb
+___bb_
+_bbb__
+`;
+
 
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
@@ -191,6 +271,12 @@ function DecodeRle(rle,w=11)
 {
 	rle = rle.replace(/(\w)(\d+)/g, (_, char, count) =>char.repeat(count));
 	return rle.split``.map((v,i)=>[i%w,i/w>>0,parseInt(v,36)-10,0]).filter(x=>!!x[2]);
+}
+
+function PadArray(a,Length,Fill)
+{
+	while(a.length<Length)	a.push(Fill);
+	return a;
 }
 
 function EncodeSpriteToRle(SpriteString)
@@ -201,7 +287,7 @@ function EncodeSpriteToRle(SpriteString)
 	let rle = ``;
 	let Width = Rows[0].length;
 	console.log(`Sprite ${Name} Width ${Width}`);
-	Rows = Rows.map( str => str.split('').map(c => c=='_'?'a':c).join('') );
+	Rows = Rows.map( str => str.split('')).map( Row=>PadArray(Row,11,'_') .map(c => c=='_'?'a':c).join('') );
 	Rows.reverse();	//	flip so we dont have to invert y in shader
 	let CharString = Rows.join('');
 	console.log(`CharString=${CharString}`);
@@ -258,7 +344,10 @@ function EncodeSpritesToCode(Sprites)
 	console.log(Code);
 }
 	
-EncodeSpritesToCode(Ghost,Cross,Grave,Grass,Fence);
+EncodeSpritesToCode(
+					Ghost,Cross,Grave,Grass,Fence,
+					Num0,Num1,Num2,Num3,Num4,Num5,Num6,Num7,Num8,Num9,
+					);
 
 </script>
 
