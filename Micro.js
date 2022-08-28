@@ -1,4 +1,3 @@
-
 import * as CubeShader from './Micro_CubeShader.js'
 import * as PhysicsPositionShader from './Micro_PhysicsPositionShader.js'
 import * as PhysicsVelocityShader from './Micro_PhysicsVelocityShader.js'
@@ -224,12 +223,10 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	function Tick()
 	{
 		window.requestAnimationFrame(Tick);
-		//setTimeout( Tick, 500 );
-		
 		Update();
-		
-		Canvas.width = Canvas.getBoundingClientRect().width;
-		Canvas.height = Canvas.getBoundingClientRect().height;
+		let Rect = Canvas.getBoundingClientRect();
+		Canvas.width = Rect.width;
+		Canvas.height = Rect.height;
 
 		//	first frame needs to bake positions before velocity pass
 		//if ( TickCount == 0 )
@@ -238,13 +235,10 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 			Blit(VelocityTextures,rc.PhysicsVelocityShader);
 		Blit(PositionTextures,rc.PhysicsPositionShader);
 		Render(Canvas.width,Canvas.height);
-		
-		//RenderPhysics([Canvas.width,Canvas.height]);
 		PostFrame();
 		TickCount++;
 	}
 	Tick();
-	return 'Bootup finished';
 }
 
 
@@ -340,28 +334,35 @@ function AllocTextures(Textures,PixelData)
 	}
 }
 
+let BoundShader;
+function BindShader(Shader)
+{
+	gl.useProgram( BoundShader=Shader );
+}
+
+function ul(Program,Name)
+{
+	return Program[Name] = Program[Name] || gl.getUniformLocation(Program,Name);
+}
+
 function SetUniformMat4(Program,Name,Value)
 {
-	let UniformLocation = gl.getUniformLocation( Program, Name );
-	const Transpose = false;
-	gl.uniformMatrix4fv( UniformLocation, Transpose, Value );
+	gl.uniformMatrix4fv( ul(Program,Name),0,Value);
 }
 
 function SetUniformVector(Program,Name,Value)
 {
-	let UniformLocation = gl.getUniformLocation( Program, Name );
 	let Length = Math.min( 4, Value.length );
 	let f = `uniform${Length}fv`;
-	gl[f]( UniformLocation, Value );
+	gl[f]( ul(Program,Name), Value );
 }
 
 function SetUniformTexture(Program,Name,TextureIndex,Texture)
 {
-	let UniformLocation = gl.getUniformLocation( Program, Name );
 	let TextureValue = gl.TEXTURE0+TextureIndex;
 	gl.activeTexture( TextureValue );
 	gl.bindTexture( gl.TEXTURE_2D, Texture );
-	gl.uniform1iv( UniformLocation, [TextureIndex] );
+	gl.uniform1iv( ul(Program,Name), [TextureIndex] );
 }
 
 
