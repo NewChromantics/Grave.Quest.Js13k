@@ -19,7 +19,7 @@ let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
 const Sprites = [
-	"b1a2b1a3b1a2b2a2b1a3b1a2b3a1b2a1b2a1b59a2b3a2b4a2b3a2b2a1b9a3b7a2", //	Ghost
+	"a2b1a1b1a1b1a1b1a1b1a2b1a1b1a1b1a1b1a1b1a1b10a1b10a1b4a1b1a1b27a2b3a2b4a2b3a2b2a1b9a3b7a2", //	Ghost
 	"a4b3a8b3a8b3a8b3a8b3a8b3a4b22a4b3a8b3a4", //	Cross
 	"b36a1b3a1b7a1b1a1b9a1b9a1b1a1b7a1b3a1b3a1b9a3b7a5b5a3", //	Grave
 	"a5b1a9b3a5b2a1b1a1b2a6b1a1b2a1b2a3b1a2b1a1b1a5b1a2b1a2b2a6b1a16", //	Grass
