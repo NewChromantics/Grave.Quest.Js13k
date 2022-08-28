@@ -337,7 +337,7 @@ function AllocTextures(Textures,PixelData)
 let BoundShader;
 function BindShader(Shader)
 {
-	gl.useProgram( BoundShader=Shader );
+	gl.useProgram(BoundShader=Shader);
 }
 
 function ul(Name)
@@ -359,10 +359,9 @@ function SetUniformVector(Name,Value)
 
 function SetUniformTexture(Name,TextureIndex,Texture)
 {
-	let TextureValue = gl.TEXTURE0+TextureIndex;
-	gl.activeTexture( TextureValue );
+	gl.activeTexture(gl.TEXTURE0+TextureIndex);
 	gl.bindTexture( gl.TEXTURE_2D, Texture );
-	gl.uniform1iv( ul(Name), [TextureIndex] );
+	gl.uniform1i(ul(Name),TextureIndex);
 }
 
 
@@ -380,20 +379,15 @@ function Render(w,h)
 	
 	BindShader(rc.CubeShader);
 
-	//	set uniforms
 	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
 	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix(Viewport));
 	SetUniformVector('Time',[GetTime()]);
-	
-	//	hardcoded texture slots
 	SetUniformTexture('PositionsTexture',0,PositionTextures[NEW]);
 	SetUniformTexture('OldPositionsTexture',1,PositionTextures[OLD]);
 	SetUniformTexture('NewVelocitys',2,VelocityTextures[NEW]);
-
 	
-	let Instances = PositionTextures[NEW].Size[0] * PositionTextures[NEW].Size[1];
-	let TriangleCount = 6*2*3;
-	gl.drawArrays( gl.TRIANGLES, 0, TriangleCount*Instances );
+	let IndexCount = 6*2*3;
+	gl.drawArrays(gl.TRIANGLES,0,IndexCount*DATAWIDTH*DATAHEIGHT);
 }
 
 
@@ -418,18 +412,14 @@ function Blit(Textures,Shader)
 	BindShader( Shader );
 
 	SetUniformVector('Time',[GetTime()]);
-
 	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
 	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
-	if ( Target != PositionTextures[NEW] )
-		SetUniformTexture('NewPositions',2,PositionTextures[NEW]);
-	else
-		SetUniformTexture('NewPositions',2,PositionTextures[OLD]);
+	SetUniformTexture('NewPositions',2,PositionTextures[Target!=PositionTextures[NEW]?NEW:OLD]);
 	SetUniformTexture('SpritePositions',3,SpriteTextures[0]);
 	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
 	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
 	SetUniformVector('Random4',[lerp(),lerp(),lerp(),lerp()])
 
-	gl.drawArrays( gl.TRIANGLE_FAN, 0, 4 );
+	gl.drawArrays(gl.TRIANGLE_FAN,0,4);
 }
 
