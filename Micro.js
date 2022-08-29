@@ -38,12 +38,14 @@ const Sprites = [
 	"a13b1a21b2a9b2a10b2a6", //	!
 	"a14b1a9b3a7b5a5b7a5b2a1b2a5", //	@
 	"a13b2a9b2a40", //	.
+	"a12b5a16b1a1b1a1b1a1b1a5b1a3b1a5b1a1b1a1b1a1b1a4", //	~
 ];
 const SpriteMap = {
 	" ":15,
 	"!":16,
 	"@":17,
 	".":18,
+	"~":19,
 };
 
 function CharToSprite(c)
