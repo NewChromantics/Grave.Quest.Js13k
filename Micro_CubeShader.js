@@ -140,7 +140,7 @@ void main()
  	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 	{
 		rgb = PROJECTILE_COLOUR;
-		Vel4*=0.5;
+		Vel4*=0.2;
 	}
 
 	rgb *= mix(0.7,1.0,Rand1);
@@ -152,7 +152,7 @@ void main()
 	Lit*=4.0;
 	Lit = Lit < 1.0 ? 0.2 : 1.0;
 */
- rgb += vec3(Lit)*0.1;
+	rgb += vec3(Lit)*0.2;
 	Lit += min(9.9,length(Vel4.xyz)/4.0);
 
 	rgb *= vec3(Lit);
