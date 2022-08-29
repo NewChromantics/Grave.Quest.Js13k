@@ -8,14 +8,9 @@ function Inc3(Vec,Delta)
 	[0,1,2].map(i=>Vec[i]+=Delta[i]);
 }
 
-function Length3(x,y,z)
-{
-	return Math.sqrt(x*x+y*y+z*z);
-}
-
 function Normalise3(a,NewLength=1)
 {
-	let Length = Length3( ...a );
+	let Length = Math.hypot( ...a );
 	return a.map( x => x/Length*NewLength );
 }
 
@@ -135,7 +130,7 @@ export default class Camera
 	{
 		//	forward instead of backward
 		let Dir = this.GetForward(false);
-		let Distance = Length3( ...Dir );
+		let Distance = Math.hypot( ...Dir );
 		Dir = Normalise3( Dir );
 		
 		let Yaw = RadToDeg * Math.atan2( Dir[0], Dir[2] );
