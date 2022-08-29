@@ -112,7 +112,7 @@ void main()
 		AirDrag = 0.0;
 		vec3 Delta = CharXyz - xyz;
 		
-		if ( CharNull /*|| Typei!=STATIC */)	Delta=vec3(0,0,0);
+		if ( CharNull || Typei!=STATIC )	Delta=vec3(0,0,0);
 		Type = float(CharNull?NULL:STATIC);
 
 		//if ( length(Delta) > 0.0 )

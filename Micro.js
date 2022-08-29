@@ -204,7 +204,7 @@ function InitVelocityPixel(_,i)
 {
 	//let MapSprites = [CROSS,GRAVE,GRASS];
 	//let MapSprites = [-3,-4,-5,-6, -7,-8];
-	let MapSprites = ArrayFromTo(-3,-7);
+	let MapSprites = ArrayFromTo(-4,-8);
 	//let MapSprite = MapSprites[lerp(0,MapSprites.length)>>0];
 	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
 	let x = i % DATAWIDTH;
