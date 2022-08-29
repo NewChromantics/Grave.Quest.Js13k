@@ -13,7 +13,6 @@ uniform sampler2D NewVelocitys;
 
 vec3 GetLocalPosition(int v)
 {
-	v*=3;
 	int x = ivec4(915775499,923195439,642272978,49129)[v/30]>>v%30;
 	return sign(vec3(x&1,x&2,x&4));
 }
@@ -92,7 +91,7 @@ void main()
 {
 	int CubeIndex = gl_VertexID / (3*2*6);
 	int VertexOfCube = gl_VertexID % (3*2*6);
-	vec3 LocalPosition = GetLocalPosition( VertexOfCube );
+	vec3 LocalPosition = GetLocalPosition( VertexOfCube*3 );
 	mat4 LocalToWorldTransform = GetLocalToWorldTransform( CubeIndex, LocalPosition );
 	vec3 WorldPosition = GetWorldPosition( CubeIndex, LocalToWorldTransform, LocalPosition );
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
