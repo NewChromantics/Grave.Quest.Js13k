@@ -4,6 +4,10 @@ import * as PhysicsVelocityShader from './Micro_PhysicsVelocityShader.js'
 
 import DesktopXr from './DesktopXr.js'
 
+let NmePixelCount = 0;
+let NmeLiveCount = 0;
+let NmeCount = 0;
+let NmeDeadCount = 0;
 let TickCount = 0;
 function GetTime(){	return (TickCount==0) ? 0 : Math.floor(performance.now());	}
 
@@ -261,9 +265,10 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		//if ( TickCount == 0 )
 			//Blit(PositionTextures,rc.PhysicsPositionShader);
 		if ( TickCount != 0 )
-			Blit(VelocityTextures,rc.PhysicsVelocityShader);
+			Blit(VelocityTextures,rc.PhysicsVelocityShader,ReadGpuState);
 		Blit(PositionTextures,rc.PhysicsPositionShader);
 		Render(Canvas.width,Canvas.height);
+		//ReadGpuState();
 		PostFrame();
 		TickCount++;
 	}
@@ -283,7 +288,7 @@ function FireWeapon(Name,Transform)
 	}
 	WeaponLastFired[Name] = GetTime();
 	ProjectilePos[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( 0, 0, lerp(0,1) );
-	ProjectileVel[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(50,60), 0 );
+	ProjectileVel[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(60,80), 0 );
 	ProjectileIndex++;
 }
 
@@ -303,6 +308,8 @@ function Update()
 {
 	let Input = Desktop.GetInput();
 	Object.entries(Input).forEach( e=>UpdateWeapon(...e) );
+	
+	NmeLiveCount = Math.floor( GetTime() / 2000 );
 }
 
 function PostFrame()
@@ -396,7 +403,10 @@ function UpdateString()
 	//s.splice(i,0,' ');
 	//s = s.join('');
 	//SetUniformStr('String',s);
-	SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
+	//SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
+	let Killed = (NmeLiveCount-NmeCount);
+	SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}!    @${ProjectileIndex}`);
+	
 }
 
 function Render(w,h)
@@ -424,7 +434,7 @@ function Render(w,h)
 }
 
 
-function Blit(Textures,Shader)
+function Blit(Textures,Shader,PostFunc)
 {
 	let Camera = Desktop.Camera;
 
@@ -443,6 +453,7 @@ function Blit(Textures,Shader)
 
 	UpdateString();
 	SetUniformVector('Time',[GetTime()]);
+	SetUniformVector('NmeLiveCount',[NmeLiveCount]);
 	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
 	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
 	SetUniformTexture('NewPositions',2,PositionTextures[Target!=PositionTextures[NEW]?NEW:OLD]);
@@ -453,5 +464,96 @@ function Blit(Textures,Shader)
 	SetUniformMat4('CameraToWorld',Camera.LocalToWorld.toFloat32Array());
 
 	gl.drawArrays(gl.TRIANGLE_FAN,0,4);
+	
+	if ( PostFunc )
+		PostFunc(Textures);
 }
 
+
+let ReadBuffer;
+
+
+async function Yield(ms)
+{
+	let res,rej;
+	let p = new Promise( (rs,rj) => {res = rs; rej=rj;} );
+	setTimeout( res, ms );
+	await p;
+}
+
+async function WaitForSync(Sync,Context)
+{
+	const gl = Context;
+	
+	const RecheckMs = 1000/10;
+	async function CheckSync()
+	{
+		const Flags = 0;
+		const WaitNanoSecs = 0;
+		while(true)
+		{
+			const Status = gl.clientWaitSync( Sync, Flags, WaitNanoSecs );
+			if ( Status == gl.WAIT_FAILED )
+				throw `clientWaitSync failed`;
+			if ( Status == gl.TIMEOUT_EXPIRED )
+			{
+				await Yield( RecheckMs );
+				continue;
+			}
+			//	ALREADY_SIGNALED
+			//	CONDITION_SATISFIED
+			break;
+		}
+	}
+	return CheckSync();
+}
+
+async function ReadGpuState(Textures)
+{
+	const Velocities = await ReadTexture( Textures[NEW] );
+	const Velw = Velocities.filter((v,i)=>(i%4)==3);
+	
+	const NmeMap = {};
+	const Nmes = Velw.filter( w => w>=SPRITE0 ).forEach( w=>NmeMap[w]=(NmeMap[w]||0)+1 );
+	NmePixelCount = Velw.filter( w => w>=SPRITE0 ).length;
+	NmeCount = Object.keys(NmeMap).length;
+	NmeDeadCount = Object.values(NmeMap).filter(c=>c==0).length;
+}
+
+async function ReadTexture(Target)
+{
+	ReadBuffer = ReadBuffer || gl.createBuffer();
+	
+	const PixelBuffer = new Float32Array(DATAWIDTH*DATAHEIGHT*4);
+	
+	gl.readPixels( 0, 0, DATAWIDTH, DATAHEIGHT, gl.RGBA, gl.FLOAT, PixelBuffer );
+	return PixelBuffer;
+	/*
+	
+	gl.bindBuffer(gl.PIXEL_PACK_BUFFER, ReadBuffer );
+	gl.bufferData(gl.PIXEL_PACK_BUFFER, PixelBuffer.byteLength, gl.STREAM_READ );
+	const Offset = 0;
+	gl.readPixels( 0, 0, DATAWIDTH, DATAHEIGHT, gl.RGBA, gl.FLOAT, Offset );
+	gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null );
+	
+	//	create a sync point so we know when readpixels commands above have completed
+	const Sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+	
+	async function DoRead()
+	{
+		await WaitForSync(Sync,gl);
+		gl.deleteSync(Sync);
+		gl.bindBuffer(gl.PIXEL_PACK_BUFFER, ReadBuffer);
+		const SourceOffset = 0;
+		const DestinationOffset = 0;
+		const DestinationSize = DATAWIDTH*DATAHEIGHT*4;//PixelBuffer.byteLength;
+		gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, SourceOffset, PixelBuffer, DestinationOffset, DestinationSize );
+		gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+		return PixelBuffer;
+	}
+	
+	return DoRead();
+	//Image.ReadPixelsBufferPromise.finally(Cleanup);
+	//gl.deleteBuffer(ReadPixelsBuffer);
+	 */
+}

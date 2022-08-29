@@ -79,6 +79,8 @@ vec3 hash32(vec2 p)
 
 ${NmeMeta}
 
+uniform float NmeLiveCount;
+
 void main()
 {
 	vec4 Vel4 = dataFetch(OldVelocitys);
@@ -100,9 +102,8 @@ void main()
 	float AirDrag = 0.01;
 
 	//	convert from static to nme
-	int MinNme = int(Time/1000.0);
-	if ( NmeIndex < MinNme && Type < 0.0 )
-		Type = float(SPRITE0);
+	if ( NmeIndex < int(NmeLiveCount) && Type < 0.0 )
+		Type = float(SPRITE0+NmeIndex);
 
 
 	//	spring to sprite position

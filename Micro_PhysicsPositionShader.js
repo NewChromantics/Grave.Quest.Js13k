@@ -8,8 +8,8 @@ export const NmeMeta =
 
 
 #define NmeDepth	NmeY
-#define NmeX		(mod(NmeIndexf,10.0))
-#define NmeY		(floor(NmeIndexf/10.0))
+#define NmeX		(mod(NmeIndexf,5.0))
+#define NmeY		(mod(floor(NmeIndexf/10.0),10.0)*0.2)
 #define TimeOff		( Time==0.0 ? 0.0 : 100000.0 )
 #define NmeTime		( (TimeOff+Time) * (NmeIndexf/700.0) + NmeIndexf*37.47 )
 #define SinTimef(Speed)	( fract(NmeTime/Speed) * PI * 2.0 )
@@ -44,7 +44,7 @@ export const NmeMeta =
 uniform mat4 String[STRINGCOUNT];
 #define CharLineW		10
 #define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,2,7)
-#define CharKern		vec3(0.4,-0.4,1)
+#define CharKern		vec3(0.45,-0.4,1)
 #define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
 
 #define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n),1.0) * texelFetch( SpritePositions, ivec2(CharP,s), 0 )).xyz
