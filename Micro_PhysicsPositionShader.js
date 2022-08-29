@@ -29,7 +29,8 @@ export const NmeMeta =
 #define Type_IsNull		(Typei==NULL)
 #define Type_IsDebris	(Typei==DEBRIS)
 #define Type_IsSprite	(Typei>=SPRITE0)
-#define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
+//#define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
+#define SpriteIndex		(Typei>0?0 : abs(Typei)-SPRITE0 )
 
 #define IsFloor			(int(FragCubeIndex) == DATALAST)
 #define IsChar			(CharI>=0)
