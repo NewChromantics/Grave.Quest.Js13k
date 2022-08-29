@@ -136,7 +136,7 @@ void main()
  	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 		rgb = PROJECTILE_COLOUR;
 
-	if ( IsFloor )
+	if ( IsFloor || IsChar )
 		Vel4 = vec4(0);
 
 	rgb *= mix(0.7,1.0,Rand1);

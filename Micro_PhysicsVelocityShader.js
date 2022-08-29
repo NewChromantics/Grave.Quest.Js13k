@@ -106,15 +106,26 @@ void main()
 
 
 	//	spring to sprite position
-	if ( !IsProjectile && Type_IsSprite )
+	if ( IsChar )
 	{
-		Vel *= 0.95;
-		float Speed = 1.1;
-		vec3 Delta = NmePos.xyz - xyz;
+		float Speed = 1.6;
+		AirDrag = 0.1;
+		vec3 Delta = Charxyz(CharN,CharN) - xyz;
 		if ( length(Delta) > 0.0 )
 			Delta = normalize(Delta) * min( length(Delta), Speed );
 		Vel += Delta;
 	}
+	else if ( !IsProjectile && Type_IsSprite )
+	{
+		Vel *= 0.95;
+		float Speed = 1.1;
+		vec3 Target = NmePos.xyz;
+		vec3 Delta = Target - xyz;
+		if ( length(Delta) > 0.0 )
+			Delta = normalize(Delta) * min( length(Delta), Speed );
+		Vel += Delta;
+	}
+
 
 	Vel *= 1.0 - AirDrag;
 	Vel.y += MOVINGf * -GravityY * TIMESTEP;
@@ -147,7 +158,7 @@ void main()
 		Type = float(DEBRIS);
 	}
 
-	if ( xyz.y <= float(FLOORY) )
+	if ( xyz.y <= float(FLOORY) && !IsChar )
 	{
 		Vel = reflect( Vel*(1.0-FloorDrag), UP );
 		Vel.y = abs(Vel.y);

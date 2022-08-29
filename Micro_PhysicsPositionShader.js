@@ -4,7 +4,7 @@ export const NmeMeta =
 
 #define dataFetch(t)	texelFetch(t,ivec2(gl_FragCoord),0)
 
-#define SpriteMat(t,s)	mat4( vec4(-CUBESIZE*s,0,0,0),	vec4(0,CUBESIZE*s,0,0),	vec4(0,0,CUBESIZE*s,0),	vec4(t,1) )
+#define SpriteMat(t,s)	mat4( vec4(CUBESIZE*s,0,0,0),	vec4(0,CUBESIZE*s,0,0),	vec4(0,0,CUBESIZE*s,0),	vec4(t,1) )
 
 
 #define NmeDepth	NmeY
@@ -31,6 +31,23 @@ export const NmeMeta =
 #define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
 
 #define IsFloor			(int(FragCubeIndex) == DATALAST)
+#define IsChar			(CharI>=0)
+#define PPerChar		20
+//#define CharI			(FragIndex-(DATAWIDTH*(DATAHEIGHT-10)))
+#define CharBuffer		30
+#define CharI			(FragIndex-(DATALAST-PPerChar*CharBuffer))
+#define CharP			(CharI%PPerChar)
+#define CharN			int(CharI/PPerChar)
+
+#define CharLineW		10
+#define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,0,7)
+#define CharKern		vec3(0.4,0.4,1)
+#define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
+
+#define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n),1.0) * texelFetch( SpritePositions, ivec2(CharP,5+(s % 10)), 0 )).xyz
+
+
+uniform mat4 CameraToWorld;
 
 uniform float Time;
 #define FirstFrame		(Time==0.0)
@@ -76,6 +93,11 @@ void main()
 		xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
 		if ( IsProjectile )
 			xyz = vec3(10,0,0);
+/*
+		if ( IsChar )
+		{
+			xyz = Charxyz(CharN,CharN);
+		}*/
 	}
 	else
 	{

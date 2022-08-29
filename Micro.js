@@ -47,7 +47,7 @@ const Macros =
 	SPRITECOUNT:Sprites.length,
 	DATAWIDTH:128,
 	DATAHEIGHT:128,
-	DATALAST:127*127,
+	DATALAST:127*127+1,
 	MAX_PROJECTILES:50,
 	TIMESTEP:0.016666,
 	FLOORY:0.0,
@@ -159,7 +159,7 @@ class RenderContext_t
 
 function RleToRgba(rle,i,a,w=SPRITEWIDTH)
 {
-	rle = rle.replace(/(\w)(\d+)/g, (_,char,count)=>char.repeat(count));
+	rle = rle.replace(/(\w)(\d+)/g, (_,c,n)=>c.repeat(n));
 	return rle.split``.map((v,i)=>[i%w,i/w>>0,0,parseInt(v,36)-10]).filter(p=>!!p[3]);
 }
 
@@ -376,12 +376,14 @@ function Render(w,h)
 	SetUniformTexture('NewVelocitys',2,VelocityTextures[NEW]);
 	
 	let IndexCount = 6*2*3;
-	gl.drawArrays(gl.TRIANGLES,0,IndexCount*DATAWIDTH*DATAHEIGHT);
+	gl.drawArrays(gl.TRIANGLES,0,IndexCount*(DATALAST+1));
 }
 
 
 function Blit(Textures,Shader)
 {
+	let Camera = Desktop.Camera;
+
 	//	swap
 	Textures.reverse();
 	
@@ -403,6 +405,7 @@ function Blit(Textures,Shader)
 	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
 	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
 	SetUniformVector('Random4',[lerp(),lerp(),lerp(),lerp()])
+	SetUniformMat4('CameraToWorld',Camera.LocalToWorld.toFloat32Array());
 
 	gl.drawArrays(gl.TRIANGLE_FAN,0,4);
 }
