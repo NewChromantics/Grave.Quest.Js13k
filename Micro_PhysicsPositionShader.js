@@ -39,13 +39,14 @@ export const NmeMeta =
 #define CharP			(CharI%PPerChar)
 #define CharN			int(CharI/PPerChar)
 
+uniform mat4 String;
 #define CharLineW		10
 #define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,0,7)
 #define CharKern		vec3(0.4,0.4,1)
 #define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
 
-#define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n),1.0) * texelFetch( SpritePositions, ivec2(CharP,5+(s % 10)), 0 )).xyz
-
+#define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n),1.0) * texelFetch( SpritePositions, ivec2(CharP,SPRITEZERO+(s % 10)), 0 )).xyz
+#define CharXyz			(Charxyz(CharN,int(String[0][CharN])))
 
 uniform mat4 CameraToWorld;
 
@@ -93,11 +94,11 @@ void main()
 		xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
 		if ( IsProjectile )
 			xyz = vec3(10,0,0);
-/*
+
 		if ( IsChar )
 		{
-			xyz = Charxyz(CharN,CharN);
-		}*/
+			xyz = CharXyz;
+		}
 	}
 	else
 	{

@@ -108,12 +108,12 @@ void main()
 	//	spring to sprite position
 	if ( IsChar )
 	{
-		float Speed = 1.6;
-		AirDrag = 0.1;
-		vec3 Delta = Charxyz(CharN,CharN) - xyz;
-		if ( length(Delta) > 0.0 )
-			Delta = normalize(Delta) * min( length(Delta), Speed );
-		Vel += Delta;
+		float Speed = 10.0;
+		AirDrag = 0.0;
+		vec3 Delta = CharXyz - xyz;
+		//if ( length(Delta) > 0.0 )
+		//	Delta = normalize(Delta) * min( length(Delta), Speed );
+		Vel = Delta/TIMESTEP*0.3;
 	}
 	else if ( !IsProjectile && Type_IsSprite )
 	{

@@ -60,6 +60,7 @@ const Macros =
 	CROSS:1,
 	GRAVE:2,
 	GRASS:3,
+	SPRITEZERO:5,
 };
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
@@ -67,7 +68,7 @@ Object.assign(window,Macros);
 function PadArray(a,Length,Fill)
 {
 	while(a.length<Length)	a.push(Fill);
-	return a;
+	return a.slice(0,Length);
 }
 
 function PadPixels(a,i,_,w=DATAWIDTH)
@@ -157,10 +158,15 @@ class RenderContext_t
 	
 }
 
+function CharToi(c)
+{
+	return parseInt(c,36);
+}
+
 function RleToRgba(rle,i,a,w=SPRITEWIDTH)
 {
 	rle = rle.replace(/(\w)(\d+)/g, (_,c,n)=>c.repeat(n));
-	return rle.split``.map((v,i)=>[i%w,i/w>>0,0,parseInt(v,36)-10]).filter(p=>!!p[3]);
+	return rle.split``.map((v,i)=>[i%w,i/w>>0,0,CharToi(v)-10]).filter(p=>!!p[3]);
 }
 
 function IsMap(Row)
@@ -257,9 +263,9 @@ function FireWeapon(Name,Transform)
 		return [p.x,p.y,p.z,1];
 	}
 	WeaponLastFired[Name] = GetTime();
-	ProjectilePos[ProjectileIndex] = TransformPoint( 0, 0, lerp(0,1) );
-	ProjectileVel[ProjectileIndex++] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(50,60), 0 );
-	ProjectileIndex%=MAX_PROJECTILES;
+	ProjectilePos[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( 0, 0, lerp(0,1) );
+	ProjectileVel[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(50,60), 0 );
+	ProjectileIndex++;
 }
 
 function UpdateWeapon(Name,State)
@@ -356,6 +362,13 @@ function Pass(w,h)
 	gl.disable(gl.CULL_FACE);
 }
 
+
+function SetUniformStr(Name,Str)
+{
+	let Mat = Str.toString().split``.map(x=>CharToi(x));
+	SetUniformMat4(Name,PadArray(Mat,16,0));
+}
+
 function Render(w,h)
 {
 	let Camera = Desktop.Camera;
@@ -368,6 +381,7 @@ function Render(w,h)
 	
 	BindShader(rc.CubeShader);
 
+	SetUniformStr('String',ProjectileIndex);
 	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
 	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix([0,0,w/h,1]));
 	SetUniformVector('Time',[GetTime()]);
@@ -397,6 +411,7 @@ function Blit(Textures,Shader)
 
 	BindShader( Shader );
 
+	SetUniformStr('String',ProjectileIndex);
 	SetUniformVector('Time',[GetTime()]);
 	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
 	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
