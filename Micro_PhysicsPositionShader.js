@@ -26,6 +26,7 @@ export const NmeMeta =
 #define Type			Vel4.w
 #define Typei			int(Vel4.w)
 #define Type_IsStatic	(Typei<=STATIC)
+#define Type_IsNull		(Typei==NULL)
 #define Type_IsDebris	(Typei==DEBRIS)
 #define Type_IsSprite	(Typei>=SPRITE0)
 #define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
@@ -34,19 +35,22 @@ export const NmeMeta =
 #define IsChar			(CharI>=0)
 #define PPerChar		20
 //#define CharI			(FragIndex-(DATAWIDTH*(DATAHEIGHT-10)))
-#define CharBuffer		30
+#define CharBuffer		(STRINGCOUNT*16)
 #define CharI			(FragIndex-(DATALAST-PPerChar*CharBuffer))
 #define CharP			(CharI%PPerChar)
 #define CharN			int(CharI/PPerChar)
 
-uniform mat4 String;
+uniform mat4 String[STRINGCOUNT];
 #define CharLineW		10
 #define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,2,7)
 #define CharKern		vec3(0.4,-0.4,1)
 #define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
 
 #define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n),1.0) * texelFetch( SpritePositions, ivec2(CharP,s), 0 )).xyz
-#define CharXyz			(Charxyz(CharN,int(String[CharN/4][CharN%4])))
+#define CharS			int(String[CharN/16][CharN%16/4][CharN%4])
+#define CharXyz			(Charxyz(CharN,CharS))
+#define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
+#define CharNull		(Charw==0)
 
 uniform mat4 CameraToWorld;
 

@@ -111,9 +111,13 @@ void main()
 		float Speed = 10.0;
 		AirDrag = 0.0;
 		vec3 Delta = CharXyz - xyz;
+		
+		if ( CharNull /*|| Typei!=STATIC */)	Delta=vec3(0,0,0);
+		Type = float(CharNull?NULL:STATIC);
+
 		//if ( length(Delta) > 0.0 )
 		//	Delta = normalize(Delta) * min( length(Delta), Speed );
-		Vel = Delta/TIMESTEP*0.3;
+		Vel = Delta/TIMESTEP*0.2;
 	}
 	else if ( !IsProjectile && Type_IsSprite )
 	{

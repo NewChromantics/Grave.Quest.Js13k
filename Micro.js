@@ -7,6 +7,7 @@ import DesktopXr from './DesktopXr.js'
 let TickCount = 0;
 function GetTime(){	return (TickCount==0) ? 0 : Math.floor(performance.now());	}
 
+
 let rc;
 let gl;
 
@@ -70,13 +71,15 @@ const Macros =
 	CUBESIZE:0.06,
 	HALFCUBESIZE:0.03,
 	STATIC:0,
-	DEBRIS:1,
-	SPRITE0:2,
+	NULL:1,
+	DEBRIS:2,
+	SPRITE0:3,
 	CROSS:1,
 	GRAVE:2,
 	GRASS:3,
 	SPRITESPACE:SpriteMap[' '],
 	SPRITEZERO:5,
+	STRINGCOUNT:2,
 };
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
@@ -89,7 +92,7 @@ function PadArray(a,Length,Fill)
 
 function PadPixels(a,i,_,w=DATAWIDTH)
 {
-	a=a||Make04(w);
+	a=a||[[0,0,0,0]];
 	while(a.length<w)	a.push(...a);
 	return a.slice(0,w);
 }
@@ -380,13 +383,18 @@ function Pass(w,h)
 function SetUniformStr(Name,Str)
 {
 	let Mat = Str.toString().split``.map(x=>CharToSprite(x));
-	SetUniformMat4(Name,PadArray(Mat,16,SPRITESPACE));
+	SetUniformMat4(Name,PadArray(Mat,STRINGCOUNT*16,SPRITESPACE));
 }
+
 
 function UpdateString()
 {
-	SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000}!`);
-
+	//let s = `0123456748901234567890123456789`.split``;
+	//let i = Number((GetTime()/100)%32);
+	//s.splice(i,0,' ');
+	//s = s.join('');
+	//SetUniformStr('String',s);
+	SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
 }
 
 function Render(w,h)

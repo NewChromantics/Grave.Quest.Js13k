@@ -127,6 +127,7 @@ void main()
 	vec3 SpookyColour = mod( vec3(FragCubeIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777);
 
 	if ( Type_IsStatic )	rgb = vec3(1);
+	if ( Type_IsNull )		discard;
 	if ( Type_IsDebris )	rgb = SpookyColour;//vec3(1,0,0);
 	if ( Type_IsSprite )	rgb = SpookyColour;
 	//if ( Type_IsSprite )	rgb = vec3(0,1,0);
