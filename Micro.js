@@ -111,7 +111,7 @@ let ProjectileIndex = 0;
 //	set w to 1 when new data
 let ProjectilePos = Make04();
 let ProjectileVel = Make04();
-let ClearColour=[0.1, 0.05, 0.3, 1.0];
+let ClearColour=[0.05, 0.15, 0.05, 1.0];
 
 let Desktop;
 let FireRepeatMs = 40;

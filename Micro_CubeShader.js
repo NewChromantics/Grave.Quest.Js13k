@@ -124,7 +124,7 @@ void main()
 	vec3 rgb = vec3(1,0,1);
 
 	ivec3 xz = ivec3(mod(FragWorldPosition/FLOOR_TILE_SIZE,vec3(2)));
-	vec3 SpookyColour = mod( vec3(FragCubeIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777);
+	vec3 SpookyColour = mod( vec3(FragCubeIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777) * vec3(0.1,1,0.3);
 
 	if ( Type_IsStatic )	rgb = vec3(1);
 	if ( Type_IsDebris )	rgb = SpookyColour;//vec3(1,0,0);
