@@ -28,12 +28,27 @@ const Sprites = [
 	"a12b5a6b2a11b2a10b2a6b4a6", //	Num2
 	"a12b4a10b2a7b3a10b2a6b4a6", //	Num3
 	"a15b1a6b6a6b1a2b1a8b1a1b1a9b2a6", //	Num4
-	"a12b4a10b2a6b3a8b1a10b5a5", //	Num5
+	"a12b4a10b2a6b4a7b1a10b5a5", //	Num5
 	"a12b4a6b2a2b2a5b5a7b2a10b3a6", //	Num6
 	"a12b2a10b2a10b2a10b2a5b6a5", //	Num7
 	"a12b4a6b2a2b2a6b4a6b2a2b2a6b4a6", //	Num8
 	"a12b3a10b2a7b5a5b2a2b2a6b4a6", //	Num9
+	"a22", //
+	"a13b1a21b2a9b2a10b2a6", //	!
+	"a14b1a9b3a7b5a5b7a5b2a1b2a5", //	@
+	"a13b2a9b2a40", //	.
 ];
+const SpriteMap = {
+	" ":15,
+	"!":16,
+	"@":17,
+	".":18,
+};
+
+function CharToSprite(c)
+{
+	return SpriteMap[c]||(parseInt(c,36)+SPRITEZERO);
+}
 
 
 const Macros =
@@ -60,6 +75,7 @@ const Macros =
 	CROSS:1,
 	GRAVE:2,
 	GRASS:3,
+	SPRITESPACE:SpriteMap[' '],
 	SPRITEZERO:5,
 };
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
@@ -73,6 +89,7 @@ function PadArray(a,Length,Fill)
 
 function PadPixels(a,i,_,w=DATAWIDTH)
 {
+	a=a||Make04(w);
 	while(a.length<w)	a.push(...a);
 	return a.slice(0,w);
 }
@@ -158,15 +175,12 @@ class RenderContext_t
 	
 }
 
-function CharToi(c)
-{
-	return parseInt(c,36);
-}
 
 function RleToRgba(rle,i,a,w=SPRITEWIDTH)
 {
 	rle = rle.replace(/(\w)(\d+)/g, (_,c,n)=>c.repeat(n));
-	return rle.split``.map((v,i)=>[i%w,i/w>>0,0,CharToi(v)-10]).filter(p=>!!p[3]);
+	rle = rle.split``.map((v,i)=>[i%w,i/w>>0,0,parseInt(v,36)-10]).filter(p=>!!p[3]);
+	return rle.length?rle:null;
 }
 
 function IsMap(Row)
@@ -187,7 +201,7 @@ function InitVelocityPixel(_,i)
 {
 	//let MapSprites = [CROSS,GRAVE,GRASS];
 	//let MapSprites = [-3,-4,-5,-6, -7,-8];
-	let MapSprites = ArrayFromTo(-3,-17);
+	let MapSprites = ArrayFromTo(-3,-7);
 	//let MapSprite = MapSprites[lerp(0,MapSprites.length)>>0];
 	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
 	let x = i % DATAWIDTH;
@@ -365,8 +379,14 @@ function Pass(w,h)
 
 function SetUniformStr(Name,Str)
 {
-	let Mat = Str.toString().split``.map(x=>CharToi(x));
-	SetUniformMat4(Name,PadArray(Mat,16,0));
+	let Mat = Str.toString().split``.map(x=>CharToSprite(x));
+	SetUniformMat4(Name,PadArray(Mat,16,SPRITESPACE));
+}
+
+function UpdateString()
+{
+	SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000}!`);
+
 }
 
 function Render(w,h)
@@ -381,7 +401,7 @@ function Render(w,h)
 	
 	BindShader(rc.CubeShader);
 
-	SetUniformStr('String',ProjectileIndex);
+	UpdateString();
 	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
 	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix([0,0,w/h,1]));
 	SetUniformVector('Time',[GetTime()]);
@@ -411,7 +431,7 @@ function Blit(Textures,Shader)
 
 	BindShader( Shader );
 
-	SetUniformStr('String',ProjectileIndex);
+	UpdateString();
 	SetUniformVector('Time',[GetTime()]);
 	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
 	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);

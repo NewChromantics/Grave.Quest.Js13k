@@ -227,7 +227,7 @@ ____b_
 const Num5 =`Num5
 _bbbbb
 _b____
-_bbb__
+_bbbb_
 ____bb
 _bbbb_
 `;
@@ -264,13 +264,34 @@ ___bb_
 _bbb__
 `;
 
-const Heart =`Heart
+const Heart =`@
 _bb_bb_
 bbbbbbb
 _bbbbb_
 __bbb__
 ___b___
 `;
+
+const Space =`_
+_
+`;
+
+const Exclamation =`!
+___bb__
+__bb___
+__bb___
+_______
+__b____
+`;
+
+const Dot =`.
+_______
+_______
+_______
+__bb___
+__bb___
+`;
+
 
 
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
@@ -291,6 +312,8 @@ function EncodeSpriteToRle(SpriteString)
 {
 	let Rows = SpriteString.split('\n');
 	let Name = Rows.shift();
+	if ( Name == "_" )
+		Name = " ";
 	
 	let rle = ``;
 	let Width = Rows[0].length;
@@ -347,14 +370,30 @@ function EncodeSpritesToCode(Sprites)
 		return `	"${Rle}", //	${Name}\n`;
 	}
 	
+	function DataToMapCode(NameAndRle,Index)
+	{
+		const Rle = NameAndRle.Rle;
+		const Name = NameAndRle.Name;
+		if ( Name.length>1 )
+			return null;
+		return `	"${Name}":${Index},\n`;
+	}
+
 	const SpriteCode = SpriteDatas.map(DataToCode).join('');
 	let Code = `const Sprites = [\n${SpriteCode}];`;
 	console.log(Code);
+	
+	//	extra map for individual chars
+	const SpriteMapCode = SpriteDatas.map(DataToMapCode).filter(x=>x!=null).join('');
+	let MapCode = `const SpriteMap = {\n${SpriteMapCode}};`;
+	console.log(MapCode);
+	
 }
 	
 EncodeSpritesToCode(
 					Ghost,Cross,Grave,Grass,Fence,
 					Num0,Num1,Num2,Num3,Num4,Num5,Num6,Num7,Num8,Num9,
+					Space,Exclamation,Heart,Dot
 					);
 					
 </script>
