@@ -136,12 +136,13 @@ void main()
  	if ( int(FragCubeIndex) < MAX_PROJECTILES )
 		rgb = PROJECTILE_COLOUR;
 
-	if ( IsFloor || IsChar )
+	if ( IsFloor )
 		Vel4 = vec4(0);
 
 	rgb *= mix(0.7,1.0,Rand1);
 
 	float Lit = 1.0 - min(1.0,length(FragWorldPosition-Light.xyz)/Light.w);
+	//float Lit=1.0;
 	/*
 	//Lit *= Lit;
 	Lit*=4.0;
