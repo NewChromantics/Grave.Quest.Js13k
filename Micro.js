@@ -78,11 +78,15 @@ function GetWavexy(Seq,Time)
 	Time*=1.5;
 	let Prev = Seq.findLastIndex(s=>s[0]<=Time);
 	let p = Seq[Prev];
-	let n = Seq[Math.min(Seq.length-1,Prev+1)];
-	if ( !n )	throw `out of sequence`;
+	let fin = (Prev+1>=Seq.length)?1:0;
+	let n = Seq[Prev+(1-fin)];
+	if ( !n )
+		throw `out of sequence`;
 	Time = Math.max(0,Time-p[0]);
-	let xy = [1,2,0,0].map(c=>lerp(p[c],n[c],Time)).map(x=>lerp(1,-1,x/10));
-	return xy;
+	let xyzf = [1,2,0,0].map(c=>lerp(p[c],n[c],Time)).map(x=>lerp(1,-1,x/10));
+	//	w = end of sequence
+	xyzf[3] = fin;
+	return xyzf;
 }
 
 const Macros =

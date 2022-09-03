@@ -9,15 +9,14 @@ export const NmeMeta =
 uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
 
-#define NmeX		(WavePositions[NmeIndex].x*5.0)
-#define NmeY		(WavePositions[NmeIndex].y*3.0)
-#define NmeZ		-6.0
+#define WaveXyz(wv)	mix(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-6),HeartXyz,WavePositions[wv].w)
+
 #define TimeOff		( Time==0.0 ? 0.0 : 100000.0 )
 #define NmeTime		( (TimeOff+Time) * (NmeIndexf/700.0) + NmeIndexf*37.47 )
 #define SinTimef(Speed)	( fract(NmeTime/Speed) * PI * 2.0 )
 //#define AnimOff		vec3( 2.5*cos(SinTimef(480.0)), max(1.0,2.3*sin(SinTimef(400.0))), 2.8*cos(SinTimef(300.0)) )
 #define AnimOff		vec3(0)
-#define Nmexyz		vec3(NmeX,NmeY+4.0,NmeZ)+AnimOff
+#define Nmexyz		(WaveXyz(NmeIndex)+AnimOff)
 #define NmeTrans	SpriteMat( Nmexyz,1.2 )
 #define Spriteuv	ivec2( gl_FragCoord.x, SpriteIndex )
 
@@ -54,6 +53,8 @@ uniform mat4 String[STRINGCOUNT];
 #define CharXyz			(Charxyz(CharN,CharS))
 #define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
 #define CharNull		(Charw==0)
+
+#define HeartXyz		(CameraToWorld * SpriteMat(vec3(0,-0.5,2.2),1.0) * vec4(8.0,-6.0,0,1) ).xyz
 
 uniform mat4 CameraToWorld;
 
