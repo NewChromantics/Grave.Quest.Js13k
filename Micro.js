@@ -73,19 +73,20 @@ function DecodeWave(Wave)
 
 function GetWavexy(Seq,Time)
 {
-	//Time/=1000;
+	Time/=1000;
+	Time-=2;
+	Time*=1.5;
 	let Prev = Seq.findLastIndex(s=>s[0]<=Time);
 	let p = Seq[Prev];
 	let n = Seq[Math.min(Seq.length-1,Prev+1)];
 	if ( !n )	throw `out of sequence`;
 	Time = Math.max(0,Time-p[0]);
-	let xy = [1,2,0,0].map(c=>lerp(p[c],n[c],Time));
+	let xy = [1,2,0,0].map(c=>lerp(p[c],n[c],Time)).map(x=>lerp(1,-1,x/10));
 	return xy;
 }
 
 const Macros =
 {
-	INTROY:0.1,
 	FLOORSIZE:200.001,
 	LIGHTRAD:30.01,
 	WORLDSIZE:13.01,
@@ -111,6 +112,7 @@ const Macros =
 	SPRITESPACE:SpriteMap[' '],
 	SPRITEZERO:5,
 	STRINGCOUNT:2,
+	WAVEPOSITIONCOUNT:128,
 };
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
@@ -444,7 +446,7 @@ function UpdateUniforms()
 	SetUniformVector('Time',[GetTime()]);
 	SetUniformVector('Random4',[0,0,0,0].map(plerp));
 
-	let WavePositions = Array(128).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],GetTime()));
+	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],GetTime()-(i*2000)));
 	SetUniformVector('WavePositions',WavePositions.flat(2));
 }
 

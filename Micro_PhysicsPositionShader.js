@@ -6,16 +6,18 @@ export const NmeMeta =
 
 #define SpriteMat(t,s)	mat4( vec4(CUBESIZE*s,0,0,0),	vec4(0,CUBESIZE*s,0,0),	vec4(0,0,CUBESIZE*s,0),	vec4(t,1) )
 
+uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
-#define NmeDepth	NmeY
-#define NmeX		(mod(NmeIndexf,5.0))
-#define NmeY		(mod(floor(NmeIndexf/10.0),10.0)*0.2)
+
+#define NmeX		(WavePositions[NmeIndex].x*5.0)
+#define NmeY		(WavePositions[NmeIndex].y*3.0)
+#define NmeZ		-6.0
 #define TimeOff		( Time==0.0 ? 0.0 : 100000.0 )
 #define NmeTime		( (TimeOff+Time) * (NmeIndexf/700.0) + NmeIndexf*37.47 )
 #define SinTimef(Speed)	( fract(NmeTime/Speed) * PI * 2.0 )
-#define AnimOff		vec3( 2.5*cos(SinTimef(480.0)), max(1.0,2.3*sin(SinTimef(400.0))), 2.8*cos(SinTimef(300.0)) )
-//#define AnimOff		vec3(0)
-#define Nmexyz		vec3(NmeX-5.0,1.0+NmeY*3.0,-3.0)+AnimOff
+//#define AnimOff		vec3( 2.5*cos(SinTimef(480.0)), max(1.0,2.3*sin(SinTimef(400.0))), 2.8*cos(SinTimef(300.0)) )
+#define AnimOff		vec3(0)
+#define Nmexyz		vec3(NmeX,NmeY+4.0,NmeZ)+AnimOff
 #define NmeTrans	SpriteMat( Nmexyz,1.2 )
 #define Spriteuv	ivec2( gl_FragCoord.x, SpriteIndex )
 
@@ -93,6 +95,7 @@ void main()
 	vec3 xyz = Colour.xyz;
 
 	if ( FirstFrame )
+	//if ( FirstFrame || Type_IsSprite )
 	{
 		mat4 Trans = Type_IsSprite ? NmeTrans : SpriteMat( xyz,1.0 );
 		vec4 NmePos = Trans * texelFetch( SpritePositions, Spriteuv, 0 );
