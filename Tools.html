@@ -302,6 +302,7 @@ _bbbbb_
 `;
 
 
+
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
 function DecodeRle(rle,w=11)
@@ -375,7 +376,7 @@ function EncodeSpritesToCode(Sprites)
 	{
 		const Rle = NameAndRle.Rle;
 		const Name = NameAndRle.Name;
-		return `	"${Rle}", //	${Name}\n`;
+		return `	"${Rle}", //	${Name}`;
 	}
 	
 	function DataToMapCode(NameAndRle,Index)
@@ -384,25 +385,115 @@ function EncodeSpritesToCode(Sprites)
 		const Name = NameAndRle.Name;
 		if ( Name.length>1 )
 			return null;
-		return `	"${Name}":${Index},\n`;
+		return `	"${Name}":${Index}`;
 	}
 
-	const SpriteCode = SpriteDatas.map(DataToCode).join('');
-	let Code = `const Sprites = [\n${SpriteCode}];`;
+	const SpriteCode = SpriteDatas.map(DataToCode).join('\n');
+	let Code = `const Sprites = [\n${SpriteCode}\n];`;
 	console.log(Code);
 	
 	//	extra map for individual chars
-	const SpriteMapCode = SpriteDatas.map(DataToMapCode).filter(x=>x!=null).join('');
-	let MapCode = `const SpriteMap = {\n${SpriteMapCode}};`;
+	const SpriteMapCode = SpriteDatas.map(DataToMapCode).filter(x=>x!=null).join(',\n');
+	let MapCode = `const SpriteMap = {\n${SpriteMapCode}\n};`;
 	console.log(MapCode);
 	
 }
+
+const Wave0 =`
+__________
+__________
+____c_____
+______h___
+b__g_____d
+______i___
+___f_____e
+__________
+__________
+a_________
+`;
+const Wave1 =`
+_n_l_j_h_f
+____p_____
+o_m_k_i_g_
+__________
+__________
+_________e
+__________
+__________
+__________
+_________d
+`;
+const Alphabet=`_abcdefghijklmnopqrstuvwzyz0123456789ABCDEFGHIJKLKMNOPQRSTUVWXYZ!@£$%^&*()-=+#~?`;
+function CharToInt(c){return Alphabet.indexOf(c)}
+function IntToChar(i){return Alphabet.charAt(i)}
+
+function DecodeCoord(c)
+{
+	return c.split``.map(CharToInt);
+}
+function EncodeCoord(xyt)
+{
+	const [x,y,Time] = xyt;
+	const Enc = `${IntToChar(Time)}${IntToChar(x)}${IntToChar(y)}`;
+	const Dec = DecodeCoord(Enc);
+	if ( Dec[0]!=Time || Dec[1]!=x || Dec[2]!=y )
+		throw `Coord decode failed (${Time},${x},${y} -> ${Dec}`;
+	return Enc;
+}
+	
+function EncodeWave(Wave,Width=10,Height=10)
+{
+	//	extract ordered coords
+	let Cells = Wave.split(``).map(x=>x.trim()).filter(r=>r.length>0);
+	if ( Cells.length != Width*Height )
+		throw `Wave expected to be ${Width}x${Height} but is ${Cells.length}`;
+	function CellToCoord(TimeChar,Index)
+	{
+		const Time = CharToInt(TimeChar)-1;
+		if ( Time < 0 )
+			return null;
+		const x = Index % Width;
+		const y = Math.floor( Index/Width );
+		return [x,y,Time];
+	}
+	function CompareCell(a,b)
+	{
+		if ( a[2] < b[2] )	return -1;
+		if ( a[2] > b[2] )	return 1;
+		return 0;
+	}
+	Cells = Cells.map(CellToCoord).filter( c=> c!=null );
+	Cells.sort(CompareCell);
+	Cells = Cells.map(EncodeCoord);
+	const CellData = Cells.join('');
+	return CellData;
+}
+
+function EncodeWavesToCode(Wave0)
+{
+	let Waves = Array.from(arguments);
+	function WaveToCode(Wave)
+	{
+		return `"${Wave}"`;
+	}
+	const WaveCodes = Waves.map(w=>EncodeWave(w)).map(WaveToCode).join(',\n');
+	let Code = `let Waves = [\n${WaveCodes}\n].map(DecodeWave);`;
+	console.log(Code);
+}
+	
+	
+	
 	
 EncodeSpritesToCode(
 					Ghost,Cross,Grave,Grass,Fence,
 					Num0,Num1,Num2,Num3,Num4,Num5,Num6,Num7,Num8,Num9,
 					Space,Exclamation,Heart,Dot,DeadEnemy
 					);
+EncodeWavesToCode(Wave0,Wave1);
+
+					
+					
+					
 					
 </script>
 

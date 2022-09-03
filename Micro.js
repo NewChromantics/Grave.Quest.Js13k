@@ -57,6 +57,31 @@ function CharToSprite(c)
 	return SpriteMap[c]||(parseInt(c,36)+SPRITEZERO);
 }
 
+const Alphabet=`_abcdefghijklmnopqrstuvwzyz0123456789ABCDEFGHIJKLKMNOPQRSTUVWXYZ!@£$%^&*()-=+#~?`;
+function CharToInt(c){return Alphabet.indexOf(c)}
+function IntToChar(i){return Alphabet.charAt(i)}
+function DecodeCoord(c)
+{
+	return c.split``.map(CharToInt);
+}
+function DecodeWave(Wave)
+{
+	Wave=Wave.match(/.{3}/g).map(DecodeCoord);
+	Wave[-1]=Wave[0];
+	return Wave;
+}
+
+function GetWavexy(Seq,Time)
+{
+	//Time/=1000;
+	let Prev = Seq.findLastIndex(s=>s[0]<=Time);
+	let p = Seq[Prev];
+	let n = Seq[Math.min(Seq.length-1,Prev+1)];
+	if ( !n )	throw `out of sequence`;
+	Time = Math.max(0,Time-p[0]);
+	let xy = [1,2,0,0].map(c=>lerp(p[c],n[c],Time));
+	return xy;
+}
 
 const Macros =
 {
@@ -108,10 +133,16 @@ function InitArray(sz,init)
 	return Array(sz).fill().map(init);
 }
 
-function Make04()
+function Make04(sz=MAX_PROJECTILES)
 {
-	return InitArray(MAX_PROJECTILES,x=>[0,0,0,0]);
+	return InitArray(sz,x=>[0,0,0,0]);
 }
+
+let Waves = [
+"__ia_dbdbciddifecffcdgfchfe",
+"ciidieei_fhbgg_hfbie_jdbkc_lbbma_n_boda"
+].map(DecodeWave);
+
 
 let ProjectileIndex = 0;
 //	set w to 1 when new data
@@ -123,12 +154,14 @@ let Desktop;
 let FireRepeatMs = 40;
 
 
+
+
 //	lerp is random if no time provided
 function lerp(Min=0,Max=1,Time=Math.random())
 {
 	return Min + (Max-Min)*Time;
 }
-
+const plerp=()=>lerp();
 
 function CompileShader(Type,Source)
 {
@@ -370,6 +403,8 @@ function SetUniformMat4(Name,Value)
 function SetUniformVector(Name,Value)
 {
 	let Length = Math.min( 4, Value.length );
+	//if ( Length < 1 || isNaN(Length)) throw `Bad uniform ${Name} length ${Length}`;
+	//if ( (Value.length % Length)!=0 )	throw `Misaligned uniform ${Name} array`;
 	let f = `uniform${Length}fv`;
 	gl[f]( ul(Name), Value );
 }
@@ -396,7 +431,7 @@ function SetUniformStr(Name,Str)
 }
 
 
-function UpdateString()
+function UpdateUniforms()
 {
 	//let s = `0123456748901234567890123456789`.split``;
 	//let i = Number((GetTime()/100)%32);
@@ -406,7 +441,11 @@ function UpdateString()
 	//SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
 	let Killed = (NmeLiveCount-NmeCount);
 	SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}!    @${ProjectileIndex}`);
-	
+	SetUniformVector('Time',[GetTime()]);
+	SetUniformVector('Random4',[0,0,0,0].map(plerp));
+
+	let WavePositions = Array(128).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],GetTime()));
+	SetUniformVector('WavePositions',WavePositions.flat(2));
 }
 
 function Render(w,h)
@@ -421,10 +460,9 @@ function Render(w,h)
 	
 	BindShader(rc.CubeShader);
 
-	UpdateString();
+	UpdateUniforms();
 	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
 	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix([0,0,w/h,1]));
-	SetUniformVector('Time',[GetTime()]);
 	SetUniformTexture('PositionsTexture',0,PositionTextures[NEW]);
 	SetUniformTexture('OldPositionsTexture',1,PositionTextures[OLD]);
 	SetUniformTexture('NewVelocitys',2,VelocityTextures[NEW]);
@@ -451,8 +489,7 @@ function Blit(Textures,Shader,PostFunc)
 
 	BindShader( Shader );
 
-	UpdateString();
-	SetUniformVector('Time',[GetTime()]);
+	UpdateUniforms();
 	SetUniformVector('NmeLiveCount',[NmeLiveCount]);
 	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
 	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
@@ -460,7 +497,6 @@ function Blit(Textures,Shader,PostFunc)
 	SetUniformTexture('SpritePositions',3,SpriteTextures[0]);
 	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
 	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
-	SetUniformVector('Random4',[lerp(),lerp(),lerp(),lerp()])
 	SetUniformMat4('CameraToWorld',Camera.LocalToWorld.toFloat32Array());
 
 	gl.drawArrays(gl.TRIANGLE_FAN,0,4);
