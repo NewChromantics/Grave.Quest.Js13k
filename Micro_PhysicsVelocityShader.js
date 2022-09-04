@@ -90,12 +90,12 @@ void main()
 
 	//if ( FirstFrame )	Vel = vec3(0);
 
-	vec4 NmePos = NmeTrans * texelFetch( SpritePositions, Spriteuv, 0 );
+	vec4 NmePos = NmeTrans * SpriteXyzw(SpriteIndex);
 
 	//	new projectile data
-	if ( FragIndex < MAX_PROJECTILES && ProjectileVel[FragIndex].w > 0.0 )
+	if ( Slot_IsProjectile && ProjectileVel[Projectilei].w > 0.0 )
 	{
-		Vel = ProjectileVel[FragIndex].xyz;
+		Vel = ProjectileVel[Projectilei].xyz;
 		Type = float(DEBRIS);
 	}
 
@@ -120,7 +120,7 @@ void main()
 		//	Delta = normalize(Delta) * min( length(Delta), Speed );
 		Vel = Delta/TIMESTEP*0.2;
 	}
-	else if ( !IsProjectile && Type_IsSprite )
+	else if ( !Slot_IsProjectile && Type_IsSprite )
 	{
 		Vel *= 0.95;
 		float Speed = 1.1;
@@ -136,19 +136,18 @@ void main()
 	Vel.y += MOVINGf * -GravityY * TIMESTEP;
 
 	//	collisions
-	if ( FragIndex>=MAX_PROJECTILES )
+	if ( !Slot_IsProjectile )
 	for ( int p=0;	p<MAX_PROJECTILES;	p++ )
 	{
-		ivec2 ppuv = ivec2(p,0);
-		vec3 ppp_old = texelFetch( OldPositions, ppuv, 0 ).xyz;
-		vec3 ppp_new = texelFetch( NewPositions, ppuv, 0 ).xyz;
+		vec3 ppp_old = FetchProjectile(OldPositions,p).xyz;
+		vec3 ppp_new = FetchProjectile(NewPositions,p).xyz;
 
 		//	need to invalidate, but not working, so sometimes projectiles can cut through randomly (old to new pos)
 		if ( ProjectilePos[p].w == 1.0 )
 			ppp_old = ppp_new = ProjectilePos[p].xyz;
 
 		vec3 ppp = NearestToLine3( xyz, ppp_old, ppp_new );
-		vec3 ppv = texelFetch( OldVelocitys, ppuv, 0 ).xyz;
+		vec3 ppv = FetchProjectile(OldVelocitys,p).xyz;
 		float pplen = min( PROJECTILE_MAX_VEL,length(ppv) );
 		float SizeScale = mix( PROJECTILE_MIN_SIZE, PROJECTILE_MAX_SIZE, Range(PROJECTILE_MIN_VEL,PROJECTILE_MAX_VEL,pplen) );
 		bool Hit = length(ppp-xyz) < SizeScale;

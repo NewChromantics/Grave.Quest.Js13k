@@ -1,6 +1,6 @@
 import {NmeMeta} from './Micro_PhysicsPositionShader.js'
 export const Vert =
-`out float FragCubeIndex;
+`out vec2 FragCubexy;
 out vec3 FragWorldPosition;
 out vec4 Velocity;
 out float Rand1;
@@ -97,14 +97,14 @@ void main()
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
 	vec4 ProjectionPos = CameraProjectionTransform * CameraPos;
 	gl_Position = ProjectionPos;
-	FragCubeIndex = float(CubeIndex);
+	FragCubexy = vec2( CubeIndex%DATAWIDTH, (CubeIndex/DATAWIDTH) );
 	FragWorldPosition = WorldPosition.xyz;
 }
 `;
 
 export const Frag =
 `out vec4 FragColor;
-in float FragCubeIndex;
+in vec2 FragCubexy;
 in vec3 FragWorldPosition;
 in vec4 Velocity;
 in float Rand1;
@@ -114,6 +114,7 @@ vec4 Light = vec4(0,0,0,LIGHTRAD);
 #define FLOOR_TILE_SIZE		0.4
 #define FLOOR_COLOUR(Odd)	vec3(Odd?0.2:0.1)
 #define PROJECTILE_COLOUR	vec3(0.8,0.06,0.26)
+#define Cubexy	FragCubexy
 ${NmeMeta}
 
 
@@ -124,20 +125,20 @@ void main()
 	vec3 rgb = vec3(1,0,1);
 
 	ivec3 xz = ivec3(mod(FragWorldPosition/FLOOR_TILE_SIZE,vec3(2)));
-	vec3 SpookyColour = mod( vec3(FragCubeIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777) * vec3(0.1,1,0.3);
+	vec3 SpookyColour = mod( vec3(FragIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777) * vec3(0.1,1,0.3);
 
 	if ( Type_IsStatic )	rgb = vec3(1);
 	if ( Type_IsDebris )	rgb = SpookyColour;//vec3(1,0,0);
 	if ( Type_IsSprite )	rgb = SpookyColour;
 	//if ( Type_IsSprite )	rgb = vec3(0,1,0);
-	if ( IsFloor )
+	if ( Slot_IsFloor )
 	{
 		rgb = FLOOR_COLOUR(xz.x==xz.z);
 		Vel4*=0.0;
 	}
 	else if ( Type_IsNull )		discard;
 
- 	if ( int(FragCubeIndex) < MAX_PROJECTILES )
+ 	if (Slot_IsProjectile)
 	{
 		rgb = PROJECTILE_COLOUR;
 		Vel4*=0.2;

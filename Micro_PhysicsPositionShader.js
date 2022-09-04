@@ -1,8 +1,7 @@
 export const NmeMeta =
 `
-#define			FragIndex	(int(gl_FragCoord.x) + (int(gl_FragCoord.y)*DATAWIDTH))
 
-#define dataFetch(t)	texelFetch(t,ivec2(gl_FragCoord),0)
+#define dataFetch(t)	texelFetch(t,ivec2(Cubexy),0)
 
 #define SpriteMat(t,s)	mat4( vec4(CUBESIZE*s,0,0,0),	vec4(0,CUBESIZE*s,0,0),	vec4(0,0,CUBESIZE*s,0),	vec4(t,1) )
 
@@ -18,14 +17,33 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 #define AnimOff		vec3(0)
 #define Nmexyz		(WaveXyz(NmeIndex)+AnimOff)
 #define NmeTrans	SpriteMat( Nmexyz,1.2 )
-#define Spriteuv	ivec2( gl_FragCoord.x, SpriteIndex )
+#define SpriteXyzw(si)	vec4(texelFetch(SpritePositions,ivec2(Cubexy.x,si),0).xyz,1)
 
-#define Row				int(gl_FragCoord.y)
-#define IsProjectile	(Row==0)
-#define NmeIndex		(Row-1)
+#define NmeIndex		int(Sloti)
 #define NmeIndexf		float(NmeIndex)
+
+//	voxel slots are frag y (should pack these into index, but we use .x for sprite index)
+//	only to be used in blits
+#if !defined(Cubexy)
+#define Cubexy			gl_FragCoord
+#endif
+#define					FragIndex	(int(Cubexy.x) + (int(Cubexy.y)*DATAWIDTH))
+
+#define						ActorCount	100
+#define ProjectileRow		(ActorCount+0)
+#define Sloti				int(Cubexy.y)
+#define Slot_IsActor		(Sloti<ActorCount)
+#define Slot_IsProjectile	(Sloti==ProjectileRow)
+#define Slot_IsHeart		(Sloti==ActorCount+1)
+#define Slot_Char			(Sloti==ActorCount+2)
+#define Slot_IsFloor		(FragIndex==DATALAST)
+#define Projectilei			int(Cubexy.x)
+#define Chari
+#define FetchProjectile(t,p)	texelFetch(t,ivec2(p,ProjectileRow),0)
+
+//	type changes, so is velocity w
 #define Type			Vel4.w
-#define Typei			int(Vel4.w)
+#define Typei			int(Type)
 #define Type_IsStatic	(Typei<=STATIC)
 #define Type_IsNull		(Typei==NULL)
 #define Type_IsDebris	(Typei==DEBRIS)
@@ -33,7 +51,6 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 //#define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
 #define SpriteIndex		(Typei>0?0 : abs(Typei)-SPRITE0 )
 
-#define IsFloor			(int(FragCubeIndex) == DATALAST)
 #define IsChar			(CharI>=0)
 #define PPerChar		20
 //#define CharI			(FragIndex-(DATAWIDTH*(DATAHEIGHT-10)))
@@ -54,7 +71,8 @@ uniform mat4 String[STRINGCOUNT];
 #define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
 #define CharNull		(Charw==0)
 
-#define HeartXyz		(CameraToWorld * SpriteMat(vec3(0,-0.5,2.2),1.0) * vec4(8.0,-6.0,0,1) ).xyz
+#define HeartXyz		(CameraToWorld * SpriteMat(vec3(0,-0.5,2.2),1.0) * SpriteXyzw(SPRITEHEART) ).xyz
+
 
 uniform mat4 CameraToWorld;
 
@@ -99,9 +117,9 @@ void main()
 	//if ( FirstFrame || Type_IsSprite )
 	{
 		mat4 Trans = Type_IsSprite ? NmeTrans : SpriteMat( xyz,1.0 );
-		vec4 NmePos = Trans * texelFetch( SpritePositions, Spriteuv, 0 );
+		vec4 NmePos = Trans * SpriteXyzw(SpriteIndex);
 		xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
-		if ( IsProjectile )
+		if ( Slot_IsProjectile )
 			xyz = vec3(10,0,0);
 
 		if ( IsChar )
@@ -118,8 +136,8 @@ void main()
 	}
 
 	//	new projectile data
-	if ( FragIndex < MAX_PROJECTILES && ProjectilePos[FragIndex].w > 0.0 )
-		xyz = ProjectilePos[FragIndex].xyz;
+	if ( Slot_IsProjectile && ProjectilePos[Projectilei].w > 0.0 )
+		xyz = ProjectilePos[Projectilei].xyz;
 
 	Colour.xyz = xyz;
 }
