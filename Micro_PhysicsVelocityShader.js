@@ -112,7 +112,7 @@ void main()
 
 
 	//	spring to sprite position
-	if ( IsChar )
+	if ( Slot_IsChar )
 	{
 		float Speed = 10.0;
 		AirDrag = 0.0;
@@ -184,10 +184,10 @@ void main()
 		Vel = normalize( mix(normalize(ppv),normalize(RandDir),Randomness) );
 		Vel *= pplen * 0.4;
 
-		Type = float(p==-1?DEBRISHEART:DEBRIS);
+		Type = float(p==-1&&HeartCooldown==0.0?DEBRISHEART:DEBRIS);
 	}
 
-	if ( xyz.y <= float(FLOORY) && !IsChar && !Slot_IsHeart )
+	if ( xyz.y <= float(FLOORY) && !Slot_IsChar && !Slot_IsHeart )
 	{
 		Vel = reflect( Vel*(1.0-FloorDrag), UP );
 		Vel.y = abs(Vel.y);

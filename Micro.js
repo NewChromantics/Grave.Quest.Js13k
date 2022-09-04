@@ -10,9 +10,9 @@ let NmeCount = 0;
 let NmeDeadCount = 0;
 let TickCount = 0;
 let HeartHitCooldown=0;
+let MAXLIVES=5;
+let Lives=MAXLIVES;
 function GetTime(){	return (TickCount==0) ? 0 : Math.floor(performance.now());	}
-
-let HEARTCOOLDOWNFRAMES=60;
 
 let rc;
 let gl;
@@ -123,6 +123,7 @@ const Macros =
 	SPRITEZERO:5,
 	STRINGCOUNT:2,
 	WAVEPOSITIONCOUNT:128,
+	HEARTCOOLDOWNFRAMES:4*60,
 };
 const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
@@ -353,7 +354,7 @@ function Update()
 	Object.entries(Input).forEach( e=>UpdateWeapon(...e) );
 	
 	NmeLiveCount = Math.floor( GetTime() / 2000 );
-	HeartHitCooldown--;
+	HeartHitCooldown=Math.max(0,HeartHitCooldown-1);
 }
 
 function PostFrame()
@@ -448,14 +449,28 @@ function UpdateUniforms()
 	//let i = Number((GetTime()/100)%32);
 	//s.splice(i,0,' ');
 	//s = s.join('');
-	//SetUniformStr('String',s);
-	//SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
-	let Killed = (NmeLiveCount-NmeCount);
-	SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}!    @${ProjectileIndex}`);
-	if ( HeartHitCooldown>0 )
-		SetUniformStr('String',`~~~~~~~~~~~~~~~`);
+	if ( GetTime()<10 )
+	{
+		SetUniformStr('String',`~~~~~~~~~~~~~~~~~`);
+	}
+	else
+	{
+		//SetUniformStr('String',s);
+		//SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
+		let Killed = (NmeLiveCount-NmeCount);
+		
+		let Str = `@@@@@     `.substr(5-Lives).substr(0,5);
+		Str += ` ~${Killed} ${GetTime()/1000>>0}!`;
+		//SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}! @${ProjectileIndex}`);
+		SetUniformStr('String',Str);
+		if ( HeartHitCooldown>0 )
+			SetUniformStr('String',`~~~~~~~~~~~~~~~~~`);
+		//SetUniformStr('String',`012345678901234567890123456789`);
+	}
+	
 	SetUniformVector('Time',[GetTime()]);
 	SetUniformVector('Random4',[0,0,0,0].map(plerp));
+	SetUniformVector('HeartCooldown',[HeartHitCooldown]);
 
 	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],GetTime()-(i*2000)));
 	SetUniformVector('WavePositions',WavePositions.flat(2));
@@ -569,8 +584,11 @@ async function ReadGpuState(Textures)
 	NmeDeadCount = Object.values(NmeMap).filter(c=>c==0).length;
 	let HeartDebrisCount = Velw.filter( w => w==DEBRISHEART ).length;
 	//	new heart debris
-	if ( HeartDebrisCount>0 )
-		HeartHitCooldown = HEARTCOOLDOWNFRAMES;
+	if ( HeartDebrisCount>0 && HeartHitCooldown==0 )
+	{
+		Lives--;
+		HeartHitCooldown = HEARTCOOLDOWNFRAMES+1;
+	}
 }
 
 async function ReadTexture(Target)

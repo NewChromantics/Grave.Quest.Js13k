@@ -130,7 +130,11 @@ void main()
 
 	if ( Type_IsStatic )	rgb = vec3(1);
 	if ( Type_IsDebris )	rgb = SpookyColour;//vec3(1,0,0);
-	if ( Type_IsDebrisBlood )	{	rgb = vec3(1,0,0);Vel4=vec4(0);	}
+	if ( Type_IsDebrisBlood )
+	{
+		rgb = vec3(1,0,0);
+		Vel4=vec4(0);
+	}
 	if ( Type_IsSprite )	rgb = SpookyColour;
 	//if ( Type_IsSprite )	rgb = vec3(0,1,0);
 	if ( Slot_IsFloor )
@@ -149,6 +153,12 @@ void main()
 	{
 		rgb = HEART_COLOUR;
 		Vel4*=0.2;
+
+		if ( int(HeartCooldown) >= HEARTCOOLDOWNFRAMES )
+			discard;//rgb = vec3(0,0,1);
+		else
+			if ( (int(HeartCooldown) % 8) >= 4 )
+				discard;
 	}
 
 	rgb *= mix(0.7,1.0,Rand1);

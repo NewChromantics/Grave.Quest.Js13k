@@ -35,14 +35,14 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
 #define						ActorCount	100
 #define ProjectileRow		(ActorCount+0)
+#define CharRow				(Sloti-(ActorCount+2))
 #define Sloti				int(Cubexy.y)
 #define Slot_IsActor		(Sloti<ActorCount)
 #define Slot_IsProjectile	(Sloti==ProjectileRow)
 #define Slot_IsHeart		(Sloti==ActorCount+1)
-#define Slot_Char			(Sloti==ActorCount+2)
+#define Slot_IsChar			(CharRow>=0&&CharRow<=1)
 #define Slot_IsFloor		(FragIndex==DATALAST)
 #define Projectilei			int(Cubexy.x)
-#define Chari
 #define FetchProjectile(t,p)	texelFetch(t,ivec2(p,ProjectileRow),0)
 
 //	type changes, so is velocity w
@@ -57,13 +57,12 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 //#define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
 #define SpriteIndex		(Typei>0?0 : abs(Typei)-SPRITE0 )
 
-#define IsChar			(CharI>=0)
 #define PPerChar		20
-//#define CharI			(FragIndex-(DATAWIDTH*(DATAHEIGHT-10)))
 #define CharBuffer		(STRINGCOUNT*16)
-#define CharI			(FragIndex-(DATALAST-PPerChar*CharBuffer))
-#define CharP			(CharI%PPerChar)
-#define CharN			int(CharI/PPerChar)
+#define Chari			(int(Cubexy.x)+(CharRow*DATAWIDTH))
+//#define CharI			(FragIndex-(DATALAST-PPerChar*CharBuffer))
+#define CharP			(Chari%PPerChar)
+#define CharN			int(Chari/PPerChar)
 
 uniform mat4 String[STRINGCOUNT];
 #define CharLineW		10
@@ -81,6 +80,7 @@ uniform mat4 String[STRINGCOUNT];
 #define HeartPos0		HeartPos(vec4(0,0,0,1))
 #define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
+uniform float HeartCooldown;
 
 uniform mat4 CameraToWorld;
 
@@ -131,7 +131,7 @@ void main()
 			xyz = vec3(0,-10,0);
 		if ( Slot_IsHeart )
 			xyz = HeartXyz;
-		if ( IsChar )
+		if ( Slot_IsChar )
 			xyz = CharXyz;
 		//xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
 	}
