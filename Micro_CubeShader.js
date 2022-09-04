@@ -130,6 +130,7 @@ void main()
 
 	if ( Type_IsStatic )	rgb = vec3(1);
 	if ( Type_IsDebris )	rgb = SpookyColour;//vec3(1,0,0);
+	if ( Type_IsDebrisBlood )	{	rgb = vec3(1,0,0);Vel4=vec4(0);	}
 	if ( Type_IsSprite )	rgb = SpookyColour;
 	//if ( Type_IsSprite )	rgb = vec3(0,1,0);
 	if ( Slot_IsFloor )

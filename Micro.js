@@ -9,8 +9,10 @@ let NmeLiveCount = 0;
 let NmeCount = 0;
 let NmeDeadCount = 0;
 let TickCount = 0;
+let HeartHitCooldown=0;
 function GetTime(){	return (TickCount==0) ? 0 : Math.floor(performance.now());	}
 
+let HEARTCOOLDOWNFRAMES=60;
 
 let rc;
 let gl;
@@ -112,10 +114,10 @@ const Macros =
 	STATIC:0,
 	NULL:1,
 	DEBRIS:2,
-	SPRITE0:3,
-	CROSS:1,
-	GRAVE:2,
-	GRASS:3,
+	DEBRISHEART:3,
+	DEBRISBLOOD:3,
+	SPRITE0:4,
+	MAPSPRITE0:5,
 	SPRITESPACE:SpriteMap[' '],
 	SPRITEHEART:SpriteMap['@'],
 	SPRITEZERO:5,
@@ -251,9 +253,7 @@ function ArrayFromTo(s,e)
 
 function InitVelocityPixel(_,i)
 {
-	//let MapSprites = [CROSS,GRAVE,GRASS];
-	//let MapSprites = [-3,-4,-5,-6, -7,-8];
-	let MapSprites = ArrayFromTo(-4,-8);
+	let MapSprites = ArrayFromTo(-MAPSPRITE0,-MAPSPRITE0-4);
 	//let MapSprite = MapSprites[lerp(0,MapSprites.length)>>0];
 	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
 	let x = i % DATAWIDTH;
@@ -353,6 +353,7 @@ function Update()
 	Object.entries(Input).forEach( e=>UpdateWeapon(...e) );
 	
 	NmeLiveCount = Math.floor( GetTime() / 2000 );
+	HeartHitCooldown--;
 }
 
 function PostFrame()
@@ -451,6 +452,8 @@ function UpdateUniforms()
 	//SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
 	let Killed = (NmeLiveCount-NmeCount);
 	SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}!    @${ProjectileIndex}`);
+	if ( HeartHitCooldown>0 )
+		SetUniformStr('String',`~~~~~~~~~~~~~~~`);
 	SetUniformVector('Time',[GetTime()]);
 	SetUniformVector('Random4',[0,0,0,0].map(plerp));
 
@@ -564,6 +567,10 @@ async function ReadGpuState(Textures)
 	NmePixelCount = Velw.filter( w => w>=SPRITE0 ).length;
 	NmeCount = Object.keys(NmeMap).length;
 	NmeDeadCount = Object.values(NmeMap).filter(c=>c==0).length;
+	let HeartDebrisCount = Velw.filter( w => w==DEBRISHEART ).length;
+	//	new heart debris
+	if ( HeartDebrisCount>0 )
+		HeartHitCooldown = HEARTCOOLDOWNFRAMES;
 }
 
 async function ReadTexture(Target)

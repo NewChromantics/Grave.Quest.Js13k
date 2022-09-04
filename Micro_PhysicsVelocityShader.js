@@ -100,6 +100,10 @@ void main()
 	if ( FirstFrame && Slot_IsHeart )
 		Type = float(SPRITEHEART);
 
+	//	unset heartdebris'
+	if ( Type_IsDebrisHeart )
+		Type = float(DEBRISBLOOD);
+
 	float AirDrag = 0.01;
 
 	//	convert from static to nme
@@ -166,8 +170,8 @@ void main()
 		{
 			ppp_old = ppp_new = HeartPos0;
 			ppv = vec3(0,0,-1);
-  pplen = 42.0;
-  Randomness = 0.35;
+			pplen = 42.0;
+			Randomness = 0.35;
 			SizeScale = PROJECTILE_MAX_SIZE;
 		}
 
@@ -175,13 +179,12 @@ void main()
 		bool Hit = length(ppp-xyz) < SizeScale;
 		if ( !Hit )
 			continue;
-
 		
 		vec3 RandDir = (hash32(uv*777.777)-0.5);
 		Vel = normalize( mix(normalize(ppv),normalize(RandDir),Randomness) );
 		Vel *= pplen * 0.4;
 
-		Type = float(DEBRIS);
+		Type = float(p==-1?DEBRISHEART:DEBRIS);
 	}
 
 	if ( xyz.y <= float(FLOORY) && !IsChar && !Slot_IsHeart )
