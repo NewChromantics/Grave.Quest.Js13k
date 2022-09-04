@@ -90,14 +90,15 @@ void main()
 
 	//if ( FirstFrame )	Vel = vec3(0);
 
-	vec4 NmePos = NmeTrans * SpriteXyzw(SpriteIndex);
-
 	//	new projectile data
 	if ( Slot_IsProjectile && ProjectileVel[Projectilei].w > 0.0 )
 	{
 		Vel = ProjectileVel[Projectilei].xyz;
 		Type = float(DEBRIS);
 	}
+
+	if ( FirstFrame && Slot_IsHeart )
+		Type = float(SPRITEHEART);
 
 	float AirDrag = 0.01;
 
@@ -120,11 +121,21 @@ void main()
 		//	Delta = normalize(Delta) * min( length(Delta), Speed );
 		Vel = Delta/TIMESTEP*0.2;
 	}
+	else if ( Slot_IsHeart )
+	{
+		AirDrag = 0.12;
+		float Speed = 1.2;
+		vec3 Target = HeartXyz;
+		vec3 Delta = Target - xyz;
+		if ( length(Delta) > 0.0 )
+			Delta = normalize(Delta) * min( length(Delta), Speed );
+		Vel += Delta;
+	}
 	else if ( !Slot_IsProjectile && Type_IsSprite )
 	{
 		Vel *= 0.95;
 		float Speed = 1.1;
-		vec3 Target = NmePos.xyz;
+		vec3 Target = NmePos;
 		vec3 Delta = Target - xyz;
 		if ( length(Delta) > 0.0 )
 			Delta = normalize(Delta) * min( length(Delta), Speed );
@@ -136,7 +147,7 @@ void main()
 	Vel.y += MOVINGf * -GravityY * TIMESTEP;
 
 	//	collisions
-	if ( !Slot_IsProjectile )
+	if ( !Slot_IsProjectile && !Slot_IsHeart )
 	for ( int p=0;	p<MAX_PROJECTILES;	p++ )
 	{
 		vec3 ppp_old = FetchProjectile(OldPositions,p).xyz;
@@ -162,7 +173,7 @@ void main()
 		Type = float(DEBRIS);
 	}
 
-	if ( xyz.y <= float(FLOORY) && !IsChar )
+	if ( xyz.y <= float(FLOORY) && !IsChar && !Slot_IsHeart )
 	{
 		Vel = reflect( Vel*(1.0-FloorDrag), UP );
 		Vel.y = abs(Vel.y);

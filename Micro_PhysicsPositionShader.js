@@ -3,21 +3,20 @@ export const NmeMeta =
 
 #define dataFetch(t)	texelFetch(t,ivec2(Cubexy),0)
 
-#define SpriteMat(t,s)	mat4( vec4(CUBESIZE*s,0,0,0),	vec4(0,CUBESIZE*s,0,0),	vec4(0,0,CUBESIZE*s,0),	vec4(t,1) )
+#define SpriteScale	1.0
+#define s0			vec2(CUBESIZE*SpriteScale,0)
+#define SpriteMat(worldtrans)	mat4(s0.xyyy,s0.yxyy,s0.yyxy,vec4(worldtrans,1))
 
 uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
-
-#define WaveXyz(wv)	mix(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-6),HeartXyz,WavePositions[wv].w)
-
-#define TimeOff		( Time==0.0 ? 0.0 : 100000.0 )
-#define NmeTime		( (TimeOff+Time) * (NmeIndexf/700.0) + NmeIndexf*37.47 )
-#define SinTimef(Speed)	( fract(NmeTime/Speed) * PI * 2.0 )
-//#define AnimOff		vec3( 2.5*cos(SinTimef(480.0)), max(1.0,2.3*sin(SinTimef(400.0))), 2.8*cos(SinTimef(300.0)) )
-#define AnimOff		vec3(0)
-#define Nmexyz		(WaveXyz(NmeIndex)+AnimOff)
-#define NmeTrans	SpriteMat( Nmexyz,1.2 )
+//	sprite local pos
 #define SpriteXyzw(si)	vec4(texelFetch(SpritePositions,ivec2(Cubexy.x,si),0).xyz,1)
+
+//	wave world pos
+#define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-6))
+
+#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex)).xyz
+#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w )
 
 #define NmeIndex		int(Sloti)
 #define NmeIndexf		float(NmeIndex)
@@ -65,13 +64,15 @@ uniform mat4 String[STRINGCOUNT];
 #define CharKern		vec3(0.45,-0.4,1)
 #define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
 
-#define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n),1.0) * texelFetch( SpritePositions, ivec2(CharP,s), 0 )).xyz
+#define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n)) * texelFetch( SpritePositions, ivec2(CharP,s), 0 )).xyz
 #define CharS			int(String[CharN/16][CharN%16/4][CharN%4])
 #define CharXyz			(Charxyz(CharN,CharS))
 #define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
 #define CharNull		(Charw==0)
 
-#define HeartXyz		(CameraToWorld * SpriteMat(vec3(0,-0.5,2.2),1.0) * SpriteXyzw(SPRITEHEART) ).xyz
+#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.8,2.2)) * sxyz ).xyz
+#define HeartPos0		(CameraToWorld*vec4(0,0,1,1)).xyz	//HeartPos(vec4(0,0,0,1))
+#define HeartXyz		HeartPos0	//HeartPos(SpriteXyzw(SPRITEHEART))
 
 
 uniform mat4 CameraToWorld;
@@ -116,16 +117,16 @@ void main()
 	if ( FirstFrame )
 	//if ( FirstFrame || Type_IsSprite )
 	{
-		mat4 Trans = Type_IsSprite ? NmeTrans : SpriteMat( xyz,1.0 );
-		vec4 NmePos = Trans * SpriteXyzw(SpriteIndex);
-		xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
+		xyz = (SpriteMat(xyz)*SpriteXyzw(SpriteIndex)).xyz;
+		if ( !Type_IsStatic )
+			xyz = NmePos;	//	if is actor
 		if ( Slot_IsProjectile )
-			xyz = vec3(10,0,0);
-
+			xyz = vec3(0,-10,0);
+		if ( Slot_IsHeart )
+			xyz = HeartXyz;
 		if ( IsChar )
-		{
 			xyz = CharXyz;
-		}
+		//xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
 	}
 	else
 	{

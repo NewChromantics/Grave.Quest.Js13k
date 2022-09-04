@@ -114,6 +114,7 @@ vec4 Light = vec4(0,0,0,LIGHTRAD);
 #define FLOOR_TILE_SIZE		0.4
 #define FLOOR_COLOUR(Odd)	vec3(Odd?0.2:0.1)
 #define PROJECTILE_COLOUR	vec3(0.8,0.06,0.26)
+#define HEART_COLOUR		vec3(1,0,0)
 #define Cubexy	FragCubexy
 ${NmeMeta}
 
@@ -141,6 +142,11 @@ void main()
  	if (Slot_IsProjectile)
 	{
 		rgb = PROJECTILE_COLOUR;
+		Vel4*=0.2;
+	}
+	if ( Slot_IsHeart )
+	{
+		rgb = HEART_COLOUR;
 		Vel4*=0.2;
 	}
 
