@@ -3,19 +3,24 @@ export const NmeMeta =
 
 #define dataFetch(t)	texelFetch(t,ivec2(Cubexy),0)
 
-#define SpriteScale	1.0
-#define s0			vec2(CUBESIZE*SpriteScale,0)
-#define SpriteMat(worldtrans)	mat4(s0.xyyy,s0.yxyy,s0.yyxy,vec4(worldtrans,1))
+#define ss(s)		vec2(CUBESIZE*s,0)
+#define SpriteMats(worldtrans,s0)	mat4(s0.xyyy,s0.yxyy,s0.yyxy,vec4(worldtrans,1))
+#define SpriteMat(worldtrans)		SpriteMats(worldtrans,ss(1.0))
 
 uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
-//	sprite local pos
-#define SpriteXyzw(si)	vec4(texelFetch(SpritePositions,ivec2(Cubexy.x,si),0).xyz,1)
+#define SPRITEDIM	vec3(SPRITEW,0,0)
+#define CHARDIM		vec3(CHARW,CHARH,0)
+
+//	sprite local pos centered
+#define SpriteXyzw(si,wh)	vec4(texelFetch(SpritePositions,ivec2(Cubexy.x,si),0).xyz-(wh/2.0),1)
+//#define SpriteXyzw(si,wh)	vec4(vec3(2.5,5.0,0)-(wh/2.0),1)
+//#define SpriteXyzw(si,wh)	vec4(vec3(0.0,0.0,0),1)
 
 //	wave world pos
 #define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-6))
 
-#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex)).xyz
+#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
 #define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w )
 
 #define NmeIndex		int(Sloti)
@@ -70,9 +75,9 @@ uniform mat4 String[STRINGCOUNT];
 #define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
 #define CharNull		(Charw==0)
 
-#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.8,2.2)) * sxyz ).xyz
-#define HeartPos0		(CameraToWorld*vec4(0,0,1,1)).xyz	//HeartPos(vec4(0,0,0,1))
-#define HeartXyz		HeartPos0	//HeartPos(SpriteXyzw(SPRITEHEART))
+#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.5,2.4)) * sxyz ).xyz
+#define HeartPos0		HeartPos(vec4(0,0,0,1))
+#define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
 
 uniform mat4 CameraToWorld;
@@ -117,7 +122,7 @@ void main()
 	if ( FirstFrame )
 	//if ( FirstFrame || Type_IsSprite )
 	{
-		xyz = (SpriteMat(xyz)*SpriteXyzw(SpriteIndex)).xyz;
+		xyz = (SpriteMat(xyz)*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz;
 		if ( !Type_IsStatic )
 			xyz = NmePos;	//	if is actor
 		if ( Slot_IsProjectile )

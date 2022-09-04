@@ -95,7 +95,10 @@ const Macros =
 	LIGHTRAD:30.01,
 	WORLDSIZE:13.01,
 	PI:3.1415926538,
-	SPRITEWIDTH:11,
+	SPRITEW:11,
+	SPRITEH:10,
+	CHARW:5,
+	CHARH:5,
 	SPRITECOUNT:Sprites.length,
 	DATAWIDTH:128,
 	DATAHEIGHT:128,
@@ -225,7 +228,7 @@ class RenderContext_t
 }
 
 
-function RleToRgba(rle,i,a,w=SPRITEWIDTH)
+function RleToRgba(rle,i,a,w=SPRITEW)
 {
 	rle = rle.replace(/(\w)(\d+)/g, (_,c,n)=>c.repeat(n));
 	rle = rle.split``.map((v,i)=>[i%w,i/w>>0,0,parseInt(v,36)-10]).filter(p=>!!p[3]);

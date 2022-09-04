@@ -25,9 +25,9 @@ const float GravityY = 16.0;
 #define PROJECTILE_MIN_VEL	10.0
 #define PROJECTILE_MAX_VEL	40.0
 
-float Range(float Min,float Max,float Value)
+float Range01(float Min,float Max,float Value)
 {
-	return (Value-Min)/(Max-Min);
+	return clamp((Value-Min)/(Max-Min),0.0,1.1);
 }
 
 float TimeAlongLine3(vec3 Position,vec3 Start,vec3 End)
@@ -147,27 +147,38 @@ void main()
 	Vel.y += MOVINGf * -GravityY * TIMESTEP;
 
 	//	collisions
-	if ( !Slot_IsProjectile && !Slot_IsHeart )
-	for ( int p=0;	p<MAX_PROJECTILES;	p++ )
+	if ( !Slot_IsProjectile && !Slot_IsHeart && !Type_IsDebris )
+	for ( int p=-1;	p<MAX_PROJECTILES;	p++ )
 	{
 		vec3 ppp_old = FetchProjectile(OldPositions,p).xyz;
 		vec3 ppp_new = FetchProjectile(NewPositions,p).xyz;
+		vec3 ppv = FetchProjectile(OldVelocitys,p).xyz;
 
 		//	need to invalidate, but not working, so sometimes projectiles can cut through randomly (old to new pos)
 		if ( ProjectilePos[p].w == 1.0 )
 			ppp_old = ppp_new = ProjectilePos[p].xyz;
 
-		vec3 ppp = NearestToLine3( xyz, ppp_old, ppp_new );
-		vec3 ppv = FetchProjectile(OldVelocitys,p).xyz;
+		float Randomness = 0.6;
 		float pplen = min( PROJECTILE_MAX_VEL,length(ppv) );
-		float SizeScale = mix( PROJECTILE_MIN_SIZE, PROJECTILE_MAX_SIZE, Range(PROJECTILE_MIN_VEL,PROJECTILE_MAX_VEL,pplen) );
+		float SizeScale = mix( PROJECTILE_MIN_SIZE, PROJECTILE_MAX_SIZE, Range01(PROJECTILE_MIN_VEL,PROJECTILE_MAX_VEL,pplen) );
+
+		if ( p==-1 )
+		{
+			ppp_old = ppp_new = HeartPos0;
+			ppv = vec3(0,0,-1);
+  pplen = 42.0;
+  Randomness = 0.35;
+			SizeScale = PROJECTILE_MAX_SIZE;
+		}
+
+		vec3 ppp = NearestToLine3( xyz, ppp_old, ppp_new );
 		bool Hit = length(ppp-xyz) < SizeScale;
 		if ( !Hit )
 			continue;
 
-		float Randomness = 0.6;
-		vec3 RandDir = (hash32(uv*777.777)-0.5) * Randomness;
-		Vel = normalize( normalize(ppv) + normalize(RandDir) );
+		
+		vec3 RandDir = (hash32(uv*777.777)-0.5);
+		Vel = normalize( mix(normalize(ppv),normalize(RandDir),Randomness) );
 		Vel *= pplen * 0.4;
 
 		Type = float(DEBRIS);
