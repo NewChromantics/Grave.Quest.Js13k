@@ -9,7 +9,7 @@ let NmeLiveCount = 0;
 let NmeCount = 0;
 let NmeDeadCount = 0;
 let HeartHitCooldown;
-let MAXLIVES=1;
+let MAXLIVES=3;
 let Lives;
 function GetTime(){	return Math.floor(performance.now());	}
 
@@ -542,7 +542,7 @@ function UpdateUniforms()
 		let Killed = (NmeLiveCount-NmeCount);
 		
 		let Str = `@@@@@     `.substr(5-Lives).substr(0,5);
-		Str += ` ~${Killed} ${State.Time}!`;
+		Str += ` ~${Killed}`;
 		if ( HeartHitCooldown>0 )
 			Str =`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`;
 		//SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}! @${ProjectileIndex}`);
