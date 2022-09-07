@@ -85,15 +85,14 @@ uniform mat4 String[STRINGCOUNT];
 #define HeartPos0		HeartPos(vec4(0,0,0,1))
 #define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
-uniform vec2 Heart;
-#define HeartCooldown	int(Heart[1])
-#define Livesf			max(0.0,Heart[0])
+uniform vec3 Heart;
+#define HeartCooldown	int(Heart.y)
+#define Livesf			max(0.0,Heart.x)
 #define Dead			(Livesf<1.0)
+#define FirstFrame		(Heart.z<=0.0)
 
 uniform mat4 CameraToWorld;
 
-uniform float Time;
-#define FirstFrame		(Time==0.0)
 #define RAND1			(Pos4.w)
 #define UP				vec3(0,1,0)
 #define INITIAL_POS_RANDOMNESS	0.002
@@ -150,6 +149,9 @@ void main()
 		//	stick to floor
 		xyz.y = max( xyz.y, float(FLOORY) );
 	}
+
+//	char disapearing fix. not sure why
+  if ( Slot_IsChar ) xyz = CharXyz;
 
 	//	new projectile data
 	if ( Slot_IsProjectile && ProjectilePos[Projectilei].w > 0.0 )

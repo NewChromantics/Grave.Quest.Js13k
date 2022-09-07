@@ -88,8 +88,6 @@ void main()
 	vec3 Vel = Vel4.xyz;
 	vec3 xyz = Pos4.xyz;
 
-	//if ( FirstFrame )	Vel = vec3(0);
-
 	//	new projectile data
 	if ( Slot_IsProjectile && ProjectileVel[Projectilei].w > 0.0 )
 	{

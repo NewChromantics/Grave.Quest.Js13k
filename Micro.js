@@ -8,11 +8,21 @@ let NmePixelCount = 0;
 let NmeLiveCount = 0;
 let NmeCount = 0;
 let NmeDeadCount = 0;
-let TickCount = 0;
-let HeartHitCooldown=0;
+let HeartHitCooldown;
 let MAXLIVES=1;
 let Lives;
-function GetTime(){	return (TickCount==0) ? 0 : Math.floor(performance.now());	}
+function GetTime(){	return Math.floor(performance.now());	}
+
+function ResetGame()
+{
+	Lives = MAXLIVES;
+	HeartHitCooldown = 0;
+	NmeLiveCount = 0;
+	NmeCount = 0;
+	NmeDeadCount = 0;
+	//AllocTextures(PositionTextures,InitPositionPixel);
+	//AllocTextures(VelocityTextures,InitVelocityPixel);
+}
 
 let rc;
 let gl;
@@ -285,20 +295,32 @@ function InitPositionPixel(_,i)
 
 let ForcedString;
 
-class State_Start
+class State_Click
 {
-	constructor()
+	constructor(NextState)
 	{
-		this.Time=0;
-		ForcedString = '@@@@@@@@@@@@@@';
+		this.NextState=NextState;
+		this.WasDown={};
 	}
 	async Update()
 	{
-		return this.Started?new State_Game:this;
+		return this.Started?new this.NextState:this;
 	}
 	UpdateInput(Name,State)
 	{
-		this.Started|=State.Down;
+		this.Started|=(this.WasDown[Name] && !State.Down);
+		this.WasDown[Name]=State.Down;
+	}
+}
+
+class State_Start extends State_Click
+{
+	constructor()
+	{
+		super(State_Game);
+		this.Time=0;
+		ForcedString = '@@@@@@@@@@@@@@';
+		ResetGame();
 	}
 }
 class State_Game
@@ -307,11 +329,11 @@ class State_Game
 	{
 		this.Time=0;
 		ForcedString = null;
-		Lives = MAXLIVES;
+		ResetGame();
 	}
 	async Update()
 	{
-		NmeLiveCount = Math.floor(this.Time/2);
+		NmeLiveCount = Math.floor(this.Time/2000);
 		return Lives>0?this:new State_End;
 	}
 	UpdateInput(Name,State)
@@ -319,24 +341,17 @@ class State_Game
 	}
 }
 
-class State_End
+class State_End extends State_Click
 {
 	constructor()
 	{
-		this.Time=0;
+		super(State_Start);
+		this.Time=1;	//	dont have first frame
 		ForcedString = '~~~~~~~~~~~~~~~~~~';
-	}
-	async Update()
-	{
-		return this.Started?new State_Start:this;
-	}
-	UpdateInput(Name,State)
-	{
-		this.Started|=State.Down;
 	}
 }
 
-let State=new State_Start();
+let State;
 
 
 export default async function Bootup(Canvas,XrOnWaitForCallback)
@@ -348,10 +363,12 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	let PixelRows = PadArray(Sprites,DATAHEIGHT,`b1`).map(RleToRgba).map(PadPixels);
 	PixelRows = new Float32Array( PixelRows.flat(2) );
 	
-	AllocTextures(PositionTextures,InitPositionPixel);
-	AllocTextures(VelocityTextures,InitVelocityPixel);
+	//AllocTextures(PositionTextures,InitPositionPixel);
+	//AllocTextures(VelocityTextures,InitVelocityPixel);
 	AllocTextures(SpriteTextures,PixelRows);
 
+	State=new State_Start()
+	
 	function Tick()
 	{
 		window.requestAnimationFrame(Tick);
@@ -361,15 +378,22 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		Canvas.height = Rect.height;
 
 		//	first frame needs to bake positions before velocity pass
-		//if ( TickCount == 0 )
-			//Blit(PositionTextures,rc.PhysicsPositionShader);
-		if ( TickCount != 0 )
+		if ( State.Time == 0 )
+		{
+			//	reset positions of stuff
+			AllocTextures(PositionTextures,InitPositionPixel);
+			AllocTextures(VelocityTextures,InitVelocityPixel);
+		}
+		else
+		{
 			Blit(VelocityTextures,rc.PhysicsVelocityShader,ReadGpuState);
+		}
 		Blit(PositionTextures,rc.PhysicsPositionShader);
 		Render(Canvas.width,Canvas.height);
 		//ReadGpuState();
 		PostFrame();
-		TickCount++;
+		if ( State.Time == 0 )
+			State.Time++;
 	}
 
 	Tick();
@@ -377,7 +401,8 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	while(true)
 	{
 		State = (await Promise.all([State.Update(),Yield(30)]))[0];
-		State.Time+=30/1000;
+		if ( State.Time>0 )
+			State.Time+=30;
 	}
 }
 
@@ -435,7 +460,8 @@ function InitTexture()
 
 function AllocTextures(Textures,PixelData)
 {
-	Textures.push(null,null);
+	if ( Textures.length==0 )
+		Textures.push(null,null);
 	
 	const w = DATAWIDTH;
 	const h = DATAHEIGHT;
@@ -447,7 +473,7 @@ function AllocTextures(Textures,PixelData)
 
 	for ( let t of [OLD,NEW] )
 	{
-		Textures[t] = gl.createTexture();
+		Textures[t] = Textures[t]||gl.createTexture();
 		Textures[t].Size = [w,h];
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D,Textures[t]);
@@ -509,30 +535,25 @@ function UpdateUniforms()
 	//let i = Number((GetTime()/100)%32);
 	//s.splice(i,0,' ');
 	//s = s.join('');
-	if ( GetTime()<10 )
-	{
-		SetUniformStr('String',`~~~~~~~~~~~~~~~~~`);
-	}
-	else
+	
 	{
 		//SetUniformStr('String',s);
 		//SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
 		let Killed = (NmeLiveCount-NmeCount);
 		
 		let Str = `@@@@@     `.substr(5-Lives).substr(0,5);
-		Str += ` ~${Killed} ${GetTime()/1000>>0}!`;
+		Str += ` ~${Killed} ${State.Time}!`;
+		if ( HeartHitCooldown>0 )
+			Str =`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`;
 		//SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}! @${ProjectileIndex}`);
 		SetUniformStr('String',ForcedString||Str);
-		if ( HeartHitCooldown>0 )
-			SetUniformStr('String',`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`);
 		//SetUniformStr('String',`012345678901234567890123456789`);
 	}
 	
-	SetUniformVector('Time',[GetTime()]);
 	SetUniformVector('Random4',[0,0,0,0].map(plerp));
-	SetUniformVector('Heart',[Lives,HeartHitCooldown]);
+	SetUniformVector('Heart',[Lives,HeartHitCooldown,State.Time]);
 
-	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],(State.Time*1000)-(i*2000)));
+	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],State.Time-(i*2000)));
 	SetUniformVector('WavePositions',WavePositions.flat(2));
 }
 

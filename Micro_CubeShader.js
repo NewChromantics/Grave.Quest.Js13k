@@ -6,7 +6,6 @@ out vec4 Velocity;
 out float Rand1;
 uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
-uniform float Time;
 uniform sampler2D PositionsTexture;
 uniform sampler2D OldPositionsTexture;
 uniform sampler2D NewVelocitys;
