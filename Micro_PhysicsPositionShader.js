@@ -17,11 +17,16 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 //#define SpriteXyzw(si,wh)	vec4(vec3(2.5,5.0,0)-(wh/2.0),1)
 //#define SpriteXyzw(si,wh)	vec4(vec3(0.0,0.0,0),1)
 
-//	wave world pos
 #define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-6))
 
-#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
-#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w )
+//	on death stay still
+//#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
+//#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w*sign(Livesf))
+
+//	on death move to heart
+#define Nmexyz		(SpriteMat(Dead?HeartPos0:WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
+#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w)
+
 
 #define NmeIndex		int(Sloti)
 #define NmeIndexf		float(NmeIndex)
@@ -80,7 +85,10 @@ uniform mat4 String[STRINGCOUNT];
 #define HeartPos0		HeartPos(vec4(0,0,0,1))
 #define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
-uniform float HeartCooldown;
+uniform vec2 Heart;
+#define HeartCooldown	int(Heart[1])
+#define Livesf			max(0.0,Heart[0])
+#define Dead			(Livesf<1.0)
 
 uniform mat4 CameraToWorld;
 

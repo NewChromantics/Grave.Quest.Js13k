@@ -152,7 +152,7 @@ void main()
 
 	//	collisions
 	if ( !Slot_IsProjectile && !Slot_IsHeart && !Type_IsDebris )
-	for ( int p=-1;	p<MAX_PROJECTILES;	p++ )
+	for ( int p=Dead?0:-1;	p<MAX_PROJECTILES;	p++ )
 	{
 		vec3 ppp_old = FetchProjectile(OldPositions,p).xyz;
 		vec3 ppp_new = FetchProjectile(NewPositions,p).xyz;
@@ -184,7 +184,7 @@ void main()
 		Vel = normalize( mix(normalize(ppv),normalize(RandDir),Randomness) );
 		Vel *= pplen * 0.4;
 
-		Type = float(p==-1&&HeartCooldown==0.0?DEBRISHEART:DEBRIS);
+		Type = float(p==-1&&HeartCooldown==0?DEBRISHEART:DEBRIS);
 	}
 
 	if ( xyz.y <= float(FLOORY) && !Slot_IsChar && !Slot_IsHeart )

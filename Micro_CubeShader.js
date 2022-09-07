@@ -154,10 +154,11 @@ void main()
 		rgb = HEART_COLOUR;
 		Vel4*=0.2;
 
-		if ( int(HeartCooldown) >= HEARTCOOLDOWNFRAMES )
+		if ( Dead )discard;
+		if ( HeartCooldown >= HEARTCOOLDOWNFRAMES )
 			discard;//rgb = vec3(0,0,1);
 		else
-			if ( (int(HeartCooldown) % 8) >= 4 )
+			if ( (HeartCooldown%8) >= 4 )
 				discard;
 	}
 

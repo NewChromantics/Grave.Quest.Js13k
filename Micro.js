@@ -10,8 +10,8 @@ let NmeCount = 0;
 let NmeDeadCount = 0;
 let TickCount = 0;
 let HeartHitCooldown=0;
-let MAXLIVES=5;
-let Lives=MAXLIVES;
+let MAXLIVES=1;
+let Lives;
 function GetTime(){	return (TickCount==0) ? 0 : Math.floor(performance.now());	}
 
 let rc;
@@ -283,6 +283,61 @@ function InitPositionPixel(_,i)
 }
 
 
+let ForcedString;
+
+class State_Start
+{
+	constructor()
+	{
+		this.Time=0;
+		ForcedString = '@@@@@@@@@@@@@@';
+	}
+	async Update()
+	{
+		return this.Started?new State_Game:this;
+	}
+	UpdateInput(Name,State)
+	{
+		this.Started|=State.Down;
+	}
+}
+class State_Game
+{
+	constructor()
+	{
+		this.Time=0;
+		ForcedString = null;
+		Lives = MAXLIVES;
+	}
+	async Update()
+	{
+		NmeLiveCount = Math.floor(this.Time/2);
+		return Lives>0?this:new State_End;
+	}
+	UpdateInput(Name,State)
+	{
+	}
+}
+
+class State_End
+{
+	constructor()
+	{
+		this.Time=0;
+		ForcedString = '~~~~~~~~~~~~~~~~~~';
+	}
+	async Update()
+	{
+		return this.Started?new State_Start:this;
+	}
+	UpdateInput(Name,State)
+	{
+		this.Started|=State.Down;
+	}
+}
+
+let State=new State_Start();
+
 
 export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
@@ -316,7 +371,14 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		PostFrame();
 		TickCount++;
 	}
+
 	Tick();
+	
+	while(true)
+	{
+		State = (await Promise.all([State.Update(),Yield(30)]))[0];
+		State.Time+=30/1000;
+	}
 }
 
 
@@ -351,9 +413,7 @@ function UpdateWeapon(Name,State)
 function Update()
 {
 	let Input = Desktop.GetInput();
-	Object.entries(Input).forEach( e=>UpdateWeapon(...e) );
-	
-	NmeLiveCount = Math.floor( GetTime() / 2000 );
+	Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
 	HeartHitCooldown=Math.max(0,HeartHitCooldown-1);
 }
 
@@ -462,17 +522,17 @@ function UpdateUniforms()
 		let Str = `@@@@@     `.substr(5-Lives).substr(0,5);
 		Str += ` ~${Killed} ${GetTime()/1000>>0}!`;
 		//SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}! @${ProjectileIndex}`);
-		SetUniformStr('String',Str);
+		SetUniformStr('String',ForcedString||Str);
 		if ( HeartHitCooldown>0 )
-			SetUniformStr('String',`~~~~~~~~~~~~~~~~~`);
+			SetUniformStr('String',`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`);
 		//SetUniformStr('String',`012345678901234567890123456789`);
 	}
 	
 	SetUniformVector('Time',[GetTime()]);
 	SetUniformVector('Random4',[0,0,0,0].map(plerp));
-	SetUniformVector('HeartCooldown',[HeartHitCooldown]);
+	SetUniformVector('Heart',[Lives,HeartHitCooldown]);
 
-	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],GetTime()-(i*2000)));
+	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],(State.Time*1000)-(i*2000)));
 	SetUniformVector('WavePositions',WavePositions.flat(2));
 }
 
