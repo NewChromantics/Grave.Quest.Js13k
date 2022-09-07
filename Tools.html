@@ -302,6 +302,112 @@ _bbbbb_
 `;
 
 
+const CharS =`S
+__bbbb
+_b____
+__bbb_
+____bb
+_bbbb_
+`;
+
+const CharT =`T
+bbbbb
+__b__
+__b__
+__b__
+__b__
+`;
+
+const CharA =`A
+_bbb_
+b___b
+bbbbb
+b___b
+b___b
+`;
+
+const CharR =`R
+bbbb_
+b___b
+bbbb_
+b___b
+b___b
+`;
+
+const CharP =`P
+bbbb_
+b___b
+bbbb_
+b____
+b____
+`;
+
+const CharE =`E
+bbbbb
+b____
+bbbb_
+b____
+bbbbb
+`;
+
+const CharN =`N
+b___b
+bb__b
+b_b_b
+b__bb
+b___b
+`;
+
+const CharY =`Y
+b___b
+_b__b
+__bb_
+__b__
+_b___
+`;
+
+
+const CharK =`K
+b___b
+b__b_
+bbb__
+b__b_
+b___b
+`;
+
+const CharG =`G
+_bbbb
+b____
+b_bbb
+b___b
+_bbbb
+`;
+
+const CharM =`M
+bbb_bb_
+b__b__b
+b__b__b
+b__b__b
+b_____b
+`;
+
+const CharO =`O
+_bbbb_
+bb__bb
+bb__bb
+bb__bb
+_bbbb_
+`;
+
+const CharV =`V
+b___b
+b___b
+_b_b_
+_b_b_
+__b__
+`;
+
+
 
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
@@ -390,12 +496,11 @@ function EncodeSpritesToCode(Sprites)
 
 	const SpriteCode = SpriteDatas.map(DataToCode).join('\n');
 	let Code = `const Sprites = [\n${SpriteCode}\n];`;
-	console.log(Code);
 	
 	//	extra map for individual chars
 	const SpriteMapCode = SpriteDatas.map(DataToMapCode).filter(x=>x!=null).join(',\n');
 	let MapCode = `const SpriteMap = {\n${SpriteMapCode}\n};`;
-	console.log(MapCode);
+	console.log(`${Code}\n${MapCode}`);
 	
 }
 
@@ -487,7 +592,8 @@ function EncodeWavesToCode(Wave0)
 EncodeSpritesToCode(
 					Ghost,Cross,Grave,Grass,Fence,
 					Num0,Num1,Num2,Num3,Num4,Num5,Num6,Num7,Num8,Num9,
-					Space,Exclamation,Heart,Dot,DeadEnemy
+					Space,Exclamation,Heart,Dot,DeadEnemy,
+					CharS,CharT,CharA,CharR,CharP,CharE,CharN,CharY,CharK,CharG,CharM,CharO,CharV
 					);
 EncodeWavesToCode(Wave0,Wave1);
 

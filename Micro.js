@@ -55,6 +55,19 @@ const Sprites = [
 	"a14b1a9b3a7b5a5b7a5b2a1b2a5", //	@
 	"a13b2a9b2a40", //	.
 	"a12b5a16b1a1b1a1b1a1b1a5b1a3b1a5b1a1b1a1b1a1b1a4", //	~
+	"a12b4a10b2a7b3a7b1a11b4a5", //	S
+	"a13b1a10b1a10b1a10b1a8b5a6", //	T
+	"a11b1a3b1a6b1a3b1a6b5a6b1a3b1a7b3a7", //	A
+	"a11b1a3b1a6b1a3b1a6b4a7b1a3b1a6b4a7", //	R
+	"a11b1a10b1a10b4a7b1a3b1a6b4a7", //	P
+	"a11b5a6b1a10b4a7b1a10b5a6", //	E
+	"a11b1a3b1a6b1a2b2a6b1a1b1a1b1a6b2a2b1a6b1a3b1a6", //	N
+	"a12b1a11b1a10b2a8b1a2b1a6b1a3b1a6", //	Y
+	"a11b1a3b1a6b1a2b1a7b3a8b1a2b1a7b1a3b1a6", //	K
+	"a12b4a6b1a3b1a6b1a1b3a6b1a11b4a6", //	G
+	"a11b1a5b1a4b1a2b1a2b1a4b1a2b1a2b1a4b1a2b1a2b1a4b3a1b2a5", //	M
+	"a12b4a6b2a2b2a5b2a2b2a5b2a2b2a6b4a6", //	O
+	"a13b1a9b1a1b1a8b1a1b1a7b1a3b1a6b1a3b1a6", //	V
 ];
 const SpriteMap = {
 	" ":15,
@@ -62,8 +75,20 @@ const SpriteMap = {
 	"@":17,
 	".":18,
 	"~":19,
+	"S":20,
+	"T":21,
+	"A":22,
+	"R":23,
+	"P":24,
+	"E":25,
+	"N":26,
+	"Y":27,
+	"K":28,
+	"G":29,
+	"M":30,
+	"O":31,
+	"V":32
 };
-
 function CharToSprite(c)
 {
 	return SpriteMap[c]||(parseInt(c,36)+SPRITEZERO);
@@ -109,7 +134,7 @@ const Macros =
 	PI:3.1415926538,
 	SPRITEW:11,
 	SPRITEH:10,
-	CHARW:5,
+	CHARW:6,
 	CHARH:5,
 	SPRITECOUNT:Sprites.length,
 	DATAWIDTH:128,
@@ -319,7 +344,7 @@ class State_Start extends State_Click
 	{
 		super(State_Game);
 		this.Time=0;
-		ForcedString = '@@@@@@@@@@@@@@';
+		ForcedString = 'PRESS ANY KEY';
 		ResetGame();
 	}
 }
@@ -347,7 +372,7 @@ class State_End extends State_Click
 	{
 		super(State_Start);
 		this.Time=1;	//	dont have first frame
-		ForcedString = '~~~~~~~~~~~~~~~~~~';
+		ForcedString = 'GAME OVER';
 	}
 }
 
