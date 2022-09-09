@@ -7,7 +7,7 @@ Camera.Position = [ 0,1.8,8 ];
 Camera.LookAt = [ 0,1.8,0 ];
 Camera.FovVertical = 45;
 
-let CameraButton = 1;
+let CameraButton = 2;
 let InputState ={0:{},1:{},2:{}};
 let WeaponOffset = [0,-0.5,0.5];
 let ButtonMasks = [ 1<<0, 1<<2, 1<<1 ];
@@ -53,6 +53,7 @@ export default class DesktopXr
 		Canvas.addEventListener('mousemove',OnMouse,true);
 		Canvas.addEventListener('mouseup',OnMouse,true);
 		Canvas.addEventListener('wheel',OnMouseWheel,true);
+		Canvas.addEventListener('contextmenu',e=>e.preventDefault(),true);
 	}
 	
 	GetInput()
