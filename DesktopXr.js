@@ -52,6 +52,8 @@ function OnMouseWheel(Event)
 
 function OnLockMouse()
 {
+	if ( !Canvas.requestPointerLock )
+		return;
 	MouseLastPos = null;
 	Canvas.requestPointerLock();
 }
