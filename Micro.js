@@ -109,15 +109,21 @@ function DecodeWave(Wave)
 	return Wave;
 }
 
+function findLastIndex(a,f)
+{
+	let i = [...a].reverse().findIndex(f);
+	return i<0?i:a.length-1-i;
+}
 function GetWavexy(Seq,Time)
 {
 	Time/=1000;
 	Time-=2;
 	Time*=1.5;
-	let Prev = Seq.findLastIndex(s=>s[0]<=Time);
-	let p = Seq[Prev];
+	let Prev = findLastIndex(Seq,s=>s[0]<=Time);
 	let fin = (Prev+1>=Seq.length)?1:0;
-	let n = Seq[Prev+(1-fin)];
+	let Next = Prev+(1-fin);
+	let p = Seq[Prev];
+	let n = Seq[Next];
 	if ( !n )
 		throw `out of sequence`;
 	Time = Math.max(0,Time-p[0]);
