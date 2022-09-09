@@ -18,7 +18,7 @@ function OnMouse(Event)
 	if ( Event.button == CameraButton && Event.type=='mousedown' )
 		MouseLastPos = null;
 
-	if ( Event.buttons & ButtonMasks[CameraButton] )
+	if ( Event.buttons & ButtonMasks[CameraButton] || document.pointerLockElement )
 	{
 		let Rect = Event.currentTarget.getBoundingClientRect();
 		let ClientX = Event.pageX || Event.clientX;
@@ -27,6 +27,12 @@ function OnMouse(Event)
 		let y = ClientY - Rect.top;
 		
 		let First = MouseLastPos==null;
+		
+		if ( MouseLastPos && Event.movementX !== undefined )
+			[x,y]=MouseLastPos;
+		x-=Event.movementX||0;
+		y-=Event.movementY||0;
+
 		Camera.OnCameraFirstPersonRotate( x, y, 0, First );
 		
 		MouseLastPos = [x,y];
@@ -44,6 +50,12 @@ function OnMouseWheel(Event)
 	Camera.MovePositionAndLookAt( Forward3 );
 }
 
+function OnLockMouse()
+{
+	MouseLastPos = null;
+	Canvas.requestPointerLock();
+}
+
 export default class DesktopXr
 {
 	constructor(Canvas)
@@ -54,6 +66,7 @@ export default class DesktopXr
 		Canvas.addEventListener('mouseup',OnMouse,true);
 		Canvas.addEventListener('wheel',OnMouseWheel,true);
 		Canvas.addEventListener('contextmenu',e=>e.preventDefault(),true);
+		Canvas.addEventListener('click',OnLockMouse);
 	}
 	
 	GetInput()
