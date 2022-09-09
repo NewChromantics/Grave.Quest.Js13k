@@ -100,12 +100,19 @@ uniform mat4 CameraToWorld;
 
 export const Vert =
 `//	quad crammed into vec4s
-#define u vec4(0,1,1,0)[gl_VertexID]
-#define v vec4(0,0,1,1)[gl_VertexID]
+#define u4 vec4(0,1,1,0)
+#define v4 vec4(0,0,1,1)
 out vec2 uv;
 void main()
 {
-	uv = vec2(u,v);
+	#define CASE(x) case x:uv=vec2(u4[x],v4[x]);break;
+	switch(gl_VertexID)
+	{
+	CASE(0)
+	CASE(1)
+	CASE(2)
+	CASE(3)
+	}
 	gl_Position = vec4( uv*2.0-1.0, 0, 1 );	//	0..1 -> -1..1
 }
 `;
