@@ -1692,11 +1692,14 @@ class Device_t
 			return;
 		}
 		this.FrameUpdate_Input(Frame,Pose);
+		this.OnRender(false);	//	prerender
 		//	render
 		//const DeviceFrameBuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
 		let DeviceFrameBuffer = this.Layer.framebuffer;
 		for ( let View of Pose.views )
 			this.OnFrameClassic( Frame, Pose, View, DeviceFrameBuffer );
+		
+		this.OnRender(true);	//	post render
 	}
 	
 	OnFrameClassic(Frame,Pose,View,FrameBuffer)
@@ -1722,8 +1725,6 @@ class Device_t
 		{
 			let Pose = XrSpace ? Frame.getPose(XrSpace,RefSpace) : null;
 			return Pose ? new DOMMatrix(Pose.transform.matrix) : null;
-			return Pose ? new DOMMatrix(Pose.transform.inverse.matrix) : null;
-			return Pose ? new DOMMatrix().translate(Pose.transform.inverse.position.x,Pose.transform.inverse.position.y,Pose.transform.inverse.position.z) : null;
 		}
 
 		//	de-activate prev states

@@ -407,9 +407,42 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	//AllocTextures(VelocityTextures,InitVelocityPixel);
 	AllocTextures(SpriteTextures,PixelRows);
 
+	
+	function OnPreRender()
+	{
+		Update();
+
+		//	first frame needs to bake positions before velocity pass
+		if ( State.Time == 0 )
+		{
+			//	reset positions of stuff
+			AllocTextures(PositionTextures,InitPositionPixel);
+			AllocTextures(VelocityTextures,InitVelocityPixel);
+		}
+		else
+		{
+			Blit(VelocityTextures,rc.PhysicsVelocityShader,ReadGpuState);
+		}
+		Blit(PositionTextures,rc.PhysicsPositionShader);
+	}
+	
+	function OnPostRender()
+	{
+		//ReadGpuState();
+		PostFrame();
+		if ( State.Time == 0 )
+			State.Time++;
+	}
+	
+	
 	function OnRender(Camera)
 	{
-		Render(Camera);
+		if ( !Camera )
+			OnPreRender();
+		else if ( Camera === true )
+			OnPostRender();
+		else
+			Render(Camera);
 	}
 	function OnInput(Input)
 	{
@@ -432,23 +465,11 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	function Tick()
 	{
 		window.requestAnimationFrame(Tick);
-		Update();
 		let Rect = Canvas.getBoundingClientRect();
 		Canvas.width = Rect.width;
 		Canvas.height = Rect.height;
 
-		//	first frame needs to bake positions before velocity pass
-		if ( State.Time == 0 )
-		{
-			//	reset positions of stuff
-			AllocTextures(PositionTextures,InitPositionPixel);
-			AllocTextures(VelocityTextures,InitVelocityPixel);
-		}
-		else
-		{
-			Blit(VelocityTextures,rc.PhysicsVelocityShader,ReadGpuState);
-		}
-		Blit(PositionTextures,rc.PhysicsPositionShader);
+		OnPreRender();
 		
 		
 		const Camera = Desktop.Camera;
@@ -457,10 +478,8 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		Camera.FrameBuffer = null;
 	
 		Render(Camera);
-		//ReadGpuState();
-		PostFrame();
-		if ( State.Time == 0 )
-			State.Time++;
+		
+		OnPostRender();
 	}
 
 	Tick();
@@ -684,6 +703,7 @@ function Blit(Textures,Shader,PostFunc)
 	
 	Pass([0,0,...Target.Size]);
 	gl.disable( gl.BLEND );
+	gl.disable(gl.SCISSOR_TEST);
 	/*
 	gl.disable(gl.SCISSOR_TEST);
 	gl.disable(gl.CULL_FACE);
