@@ -148,7 +148,9 @@ const Macros =
 	DATAWIDTH:128,
 	DATAHEIGHT:128,
 	DATALAST:127*127+1,
-	MAX_PROJECTILES:40,
+	MAX_PROJECTILES:30,
+	MAX_WEAPONS:6,
+	MAX_ACTORS:100,
 	TIMESTEP:0.016666,
 	FLOORY:0.0,
 	NEARFLOORY:0.05,
@@ -205,6 +207,7 @@ let ProjectileIndex = 0;
 //	set w to 1 when new data
 let ProjectilePos = Make04();
 let ProjectileVel = Make04();
+let WeaponPoses = {}
 let ClearColour=[0.05, 0.15, 0.05, 1.0];
 
 let Desktop;
@@ -489,6 +492,7 @@ function FireWeapon(Name,Transform)
 
 function UpdateWeapon(Name,State)
 {
+	WeaponPoses[Name] = Array.from(State.Transform.toFloat32Array());
 	//	update gun pos
 	//	update firing
 	if ( !State.Down )
@@ -625,6 +629,11 @@ function UpdateUniforms()
 	SetUniformVector('Random4',[0,0,0,0].map(plerp));
 	SetUniformVector('Heart',[Lives,HeartHitCooldown,State.Time]);
 
+	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
+	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
+	SetUniformMat4('WeaponPoses',Object.values(WeaponPoses).flat(4));
+
+	
 	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],State.Time-(i*2000)));
 	SetUniformVector('WavePositions',WavePositions.flat(2));
 }
@@ -690,8 +699,6 @@ function Blit(Textures,Shader,PostFunc)
 	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
 	SetUniformTexture('NewPositions',2,PositionTextures[Target!=PositionTextures[NEW]?NEW:OLD]);
 	SetUniformTexture('SpritePositions',3,SpriteTextures[0]);
-	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
-	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
 	SetUniformMat4('CameraToWorld',Camera.LocalToWorld.toFloat32Array());
 
 	gl.drawArrays(gl.TRIANGLE_FAN,0,4);

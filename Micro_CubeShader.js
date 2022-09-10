@@ -16,6 +16,10 @@ uniform sampler2D NewVelocitys;
 #define ENTROPY_MAX4	vec4(ENTROPY_MAX,ENTROPY_MAX,ENTROPY_MAX,1)
 #define dataFetch(t)	Lerp( ENTROPY_MIN4, ENTROPY_MAX4, texelFetch(t,ivec2(Cubexy),0) )
 
+uniform mat4 WeaponPoses[MAX_WEAPONS];
+
+#define Cubexy	FragCubexy
+${NmeMeta}
 
 vec3 GetLocalPosition(int v)
 {
@@ -26,14 +30,12 @@ vec3 GetLocalPosition(int v)
 #define FloorCubeSize (FLOORSIZE/CUBESIZE)
 #define FloorTransform	mat4( vec4(FloorCubeSize,0,0,0),	vec4(0,1,0,0),	vec4(0,0,FloorCubeSize,0),	vec4(0,float(FLOORY)-CUBESIZE,0,1) )
 
-mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
+mat4 GetLocalToWorldTransform(vec3 LocalPosition)
 {
-	if ( CubeIndex == DATALAST )	return FloorTransform;
+	if ( Slot_IsFloor )	return FloorTransform;
+	if ( Slot_IsWeapon )	return WeaponPoses[Weaponi];
 
-	int u = CubeIndex % textureSize(PositionsTexture,0).x;
-	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
 
-	vec2 Cubexy = vec2(u,v);
 	vec4 OldPosition4 = dataFetch(OldPositionsTexture);
 	vec4 Position4 = dataFetch(PositionsTexture);
 	Rand1 = Position4.w;
@@ -47,18 +49,15 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 }
 
 float VelocityStretch = 4.0;
-#define ENABLE_STRETCH	(FLOAT_TARGET && CubeIndex != DATALAST)
+#define ENABLE_STRETCH	(FLOAT_TARGET && !Slot_IsFloor)
 //#define ENABLE_STRETCH	false
 
-vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPosition)
+vec3 GetWorldPosition(mat4 LocalToWorldTransform,vec3 LocalPosition)
 {
 	//	stretching relies on cube being -1...1
 	//	gr: or does it? cubes stretch better, but always double size
 	LocalPosition = mix( vec3(-HALFCUBESIZE),vec3(HALFCUBESIZE), LocalPosition);
 
-	int u = CubeIndex % textureSize(PositionsTexture,0).x;
-	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
-	vec2 Cubexy = vec2(u,v);
 	Velocity = dataFetch(NewVelocitys);
 
 	vec4 WorldPos = LocalToWorldTransform * vec4(LocalPosition,1.0);
@@ -98,14 +97,14 @@ vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPositio
 void main()
 {
 	int CubeIndex = gl_VertexID / (3*2*6);
+	FragCubexy = vec2( CubeIndex%DATAWIDTH, (CubeIndex/DATAWIDTH) );
 	int VertexOfCube = gl_VertexID % (3*2*6);
 	vec3 LocalPosition = GetLocalPosition( VertexOfCube*3 );
-	mat4 LocalToWorldTransform = GetLocalToWorldTransform( CubeIndex, LocalPosition );
-	vec3 WorldPosition = GetWorldPosition( CubeIndex, LocalToWorldTransform, LocalPosition );
+	mat4 LocalToWorldTransform = GetLocalToWorldTransform(LocalPosition);
+	vec3 WorldPosition = GetWorldPosition(LocalToWorldTransform, LocalPosition );
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
 	vec4 ProjectionPos = CameraProjectionTransform * CameraPos;
 	gl_Position = ProjectionPos;
-	FragCubexy = vec2( CubeIndex%DATAWIDTH, (CubeIndex/DATAWIDTH) );
 	FragWorldPosition = WorldPosition.xyz;
 }
 `;
@@ -122,6 +121,7 @@ vec4 Light = vec4(0,0,0,LIGHTRAD);
 #define FLOOR_TILE_SIZE		0.4
 #define FLOOR_COLOUR(Odd)	vec3(Odd?0.2:0.1)
 #define PROJECTILE_COLOUR	vec3(0.8,0.06,0.26)
+#define WEAPON_COLOUR		vec3(0,1,1)
 #define HEART_COLOUR		vec3(1,0,0)
 #define Cubexy	FragCubexy
 ${NmeMeta}
@@ -157,9 +157,14 @@ void main()
 	}
 	else if ( Type_IsNull )		discard;
 
- 	if (Slot_IsProjectile)
+	if (Slot_IsProjectile)
 	{
 		rgb = PROJECTILE_COLOUR;
+		Vel4*=0.2;
+	}
+	if (Slot_IsWeapon)
+	{
+		rgb = WEAPON_COLOUR;
 		Vel4*=0.2;
 	}
 	if ( Slot_IsHeart )

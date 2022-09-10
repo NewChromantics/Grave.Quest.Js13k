@@ -1722,6 +1722,8 @@ class Device_t
 		{
 			let Pose = XrSpace ? Frame.getPose(XrSpace,RefSpace) : null;
 			return Pose ? new DOMMatrix(Pose.transform.matrix) : null;
+			return Pose ? new DOMMatrix(Pose.transform.inverse.matrix) : null;
+			return Pose ? new DOMMatrix().translate(Pose.transform.inverse.position.x,Pose.transform.inverse.position.y,Pose.transform.inverse.position.z) : null;
 		}
 
 		//	de-activate prev states

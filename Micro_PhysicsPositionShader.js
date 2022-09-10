@@ -44,17 +44,21 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 #endif
 #define					FragIndex	(int(Cubexy.x) + (int(Cubexy.y)*DATAWIDTH))
 
-#define						ActorCount	100
-#define ProjectileRow		(ActorCount+0)
-#define CharRow				(Sloti-(ActorCount+2))
+#define						ActorCount	MAX_ACTORS
+#define ProjectileRow		(ActorCount+0)				//100
+#define HeartRow			(ActorCount+1)				//101
+#define CharRow				(Sloti-(ActorCount+2))		//102 103
+#define WeaponRow			(ActorCount+5)			//	104
 #define Sloti				int(Cubexy.y)
 #define Slot_IsActor		(Sloti<ActorCount)
 #define Slot_IsProjectile	(Sloti==ProjectileRow)
-#define Slot_IsHeart		(Sloti==ActorCount+1)
+#define Slot_IsHeart		(Sloti==HeartRow)
 #define Slot_IsChar			(CharRow>=0&&CharRow<=1)
 #define Slot_IsFloor		(FragIndex==DATALAST)
 #define Projectilei			int(Cubexy.x)
 #define FetchProjectile(t,p)	texelFetch(t,ivec2(p,ProjectileRow),0)
+#define Slot_IsWeapon		(Sloti==WeaponRow )//&& Weaponi < MAX_WEAPONS)
+#define Weaponi				int(Cubexy.x)
 
 //	type changes, so is velocity w
 #define Type			Vel4.w
@@ -130,6 +134,7 @@ uniform sampler2D OldPositions;
 uniform sampler2D OldVelocitys;
 uniform vec4 ProjectileVel[MAX_PROJECTILES];
 uniform vec4 ProjectilePos[MAX_PROJECTILES];
+uniform mat4 WeaponPoses[MAX_WEAPONS];
 
 uniform sampler2D SpritePositions;
 
