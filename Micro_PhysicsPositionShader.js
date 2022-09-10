@@ -23,7 +23,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 //#define SpriteXyzw(si,wh)	vec4(vec3(2.5,5.0,0)-(wh/2.0),1)
 //#define SpriteXyzw(si,wh)	vec4(vec3(0.0,0.0,0),1)
 
-#define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-6))
+#define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-10))
 
 //	on death stay still
 //#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
@@ -81,7 +81,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
 uniform mat4 String[STRINGCOUNT];
 #define CharLineW		10
-#define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,2,7)
+#define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,1,-8)
 #define CharKern		vec3(0.45,-0.4,1)
 #define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
 
@@ -91,7 +91,7 @@ uniform mat4 String[STRINGCOUNT];
 #define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
 #define CharNull		(Charw==0)
 
-#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.5,2.4)) * sxyz ).xyz
+#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.7,-1.1)) * sxyz ).xyz
 #define HeartPos0		HeartPos(vec4(0,0,0,1))
 #define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
@@ -167,8 +167,6 @@ void main()
 	{
 		xyz += Vel4.xyz * TIMESTEP;
 	
-		//	stick to floor
-		xyz.y = max( xyz.y, float(FLOORY) );
 	}
 
 //	char disapearing fix. not sure why
@@ -179,6 +177,9 @@ void main()
 		xyz = ProjectilePos[Projectilei].xyz;
 
 	//xyz = vec3((Cubexy.xy-50.0)*0.10,0);
+
+	//	stick to floor
+	xyz.y = max( xyz.y, float(FLOORY) );
 
 	Colour.xyz = dataWrite(xyz);
 }

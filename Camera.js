@@ -27,7 +27,7 @@ const DegToRad = Math.PI / 180;
 const RadToDeg = 1/DegToRad;
 const Near = 0.01;
 const Far = 10000;
-const FovV = 45;
+const FovV = 40;
 const Up = [0,1,0];
 
 export default class Camera

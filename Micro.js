@@ -408,7 +408,7 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	AllocTextures(SpriteTextures,PixelRows);
 
 	
-	function OnPreRender()
+	function OnPreRender(CameraToWorld)
 	{
 		Update();
 
@@ -421,9 +421,9 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		}
 		else
 		{
-			Blit(VelocityTextures,rc.PhysicsVelocityShader,ReadGpuState);
+			Blit(VelocityTextures,rc.PhysicsVelocityShader,CameraToWorld,ReadGpuState);
 		}
-		Blit(PositionTextures,rc.PhysicsPositionShader);
+		Blit(PositionTextures,rc.PhysicsPositionShader,CameraToWorld);
 	}
 	
 	function OnPostRender()
@@ -435,10 +435,10 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	}
 	
 	
-	function OnRender(Camera)
+	function OnRender(Camera,CameraToWorld)
 	{
 		if ( !Camera )
-			OnPreRender();
+			OnPreRender(CameraToWorld);
 		else if ( Camera === true )
 			OnPostRender();
 		else
@@ -504,8 +504,8 @@ function FireWeapon(Name,Transform)
 		return [p.x,p.y,p.z,1];
 	}
 	WeaponLastFired[Name] = GetTime();
-	ProjectilePos[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( 0, 0, lerp(0,1) );
-	ProjectileVel[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(60,80), 0 );
+	ProjectilePos[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( 0, 0, lerp(0,-1) );
+	ProjectileVel[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(-80,-90), 0 );
 	ProjectileIndex++;
 }
 
@@ -679,9 +679,9 @@ function Render(Camera)
 }
 
 
-function Blit(Textures,Shader,PostFunc)
+function Blit(Textures,Shader,CameraToWorld,PostFunc)
 {
-	let Camera = Desktop.Camera;
+	CameraToWorld = CameraToWorld||Desktop.Camera.LocalToWorld;
 
 	//	swap
 	Textures.reverse();
@@ -696,11 +696,11 @@ function Blit(Textures,Shader,PostFunc)
 	Target.Size=[200,200];
 	gl.bindFramebuffer( gl.FRAMEBUFFER, null );
 */
-
+/*
 	let Status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
 	if ( Status != gl.FRAMEBUFFER_COMPLETE )
 		console.log(`Framebuffer status ${Status}`);
-	
+	*/
 	Pass([0,0,...Target.Size]);
 	gl.disable( gl.BLEND );
 	gl.disable(gl.SCISSOR_TEST);
@@ -719,7 +719,7 @@ function Blit(Textures,Shader,PostFunc)
 	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
 	SetUniformTexture('NewPositions',2,PositionTextures[Target!=PositionTextures[NEW]?NEW:OLD]);
 	SetUniformTexture('SpritePositions',3,SpriteTextures[0]);
-	SetUniformMat4('CameraToWorld',Camera.LocalToWorld.toFloat32Array());
+	SetUniformMat4('CameraToWorld',CameraToWorld.toFloat32Array());
 
 	gl.drawArrays(gl.TRIANGLE_FAN,0,4);
 	

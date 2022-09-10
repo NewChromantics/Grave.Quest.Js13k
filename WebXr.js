@@ -1692,7 +1692,7 @@ class Device_t
 			return;
 		}
 		this.FrameUpdate_Input(Frame,Pose);
-		this.OnRender(false);	//	prerender
+		this.OnRender(false,new DOMMatrix(Pose.transform.matrix));	//	prerender
 		//	render
 		//const DeviceFrameBuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
 		let DeviceFrameBuffer = this.Layer.framebuffer;
@@ -1710,6 +1710,7 @@ class Device_t
 		Camera.Alpha = GetBlendModeAlpha(Frame.session.environmentBlendMode);
 		Camera.FrameBuffer = FrameBuffer;
 		Camera.Viewport = [Viewport.x,Viewport.y,Viewport.width,Viewport.height];
+		Camera.LocalToWorld = new DOMMatrix(Pose.transform.matrix);
 		Camera.WorldToLocal = new DOMMatrix(Pose.transform.inverse.matrix);
 		Camera.GetProjectionMatrix = function(Viewport)
 		{

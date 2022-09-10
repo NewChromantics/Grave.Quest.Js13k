@@ -5,11 +5,10 @@ function GetTime(){	return Math.floor(performance.now());	}
 let Camera = new Camera_t();
 Camera.Position = [ 0,1.8,8 ];
 Camera.LookAt = [ 0,1.8,0 ];
-Camera.FovVertical = 45;
 
 let CameraButton = 2;
 let InputState ={0:{},1:{},2:{}};
-let WeaponOffset = [0,-0.5,0.5];
+let WeaponOffset = [0,-0.5,-3.5];
 let ButtonMasks = [ 1<<0, 1<<2, 1<<1 ];
 let MouseLastPos = null;
 
@@ -33,7 +32,7 @@ function OnMouse(Event)
 		x-=Event.movementX||0;
 		y-=Event.movementY||0;
 
-		Camera.OnCameraFirstPersonRotate( x, y, 0, First );
+		Camera.OnCameraFirstPersonRotate( -x, y, 0, First );
 		
 		MouseLastPos = [x,y];
 	}
