@@ -652,9 +652,8 @@ let ReadBuffer;
 
 async function Yield(ms)
 {
-	let res,rej;
-	let p = new Promise( (rs,rj) => {res = rs; rej=rj;} );
-	setTimeout( res, ms );
+	let r,p=new Promise(rs=>r=rs);
+	setTimeout(r,ms);
 	await p;
 }
 
