@@ -10,6 +10,13 @@ uniform sampler2D PositionsTexture;
 uniform sampler2D OldPositionsTexture;
 uniform sampler2D NewVelocitys;
 
+#define Range(mn,mx,v)	( (v-mn)/(mx-mn) )
+#define Lerp(mn,mx,v)	( mn + ((mx-mn)*v) )
+#define ENTROPY_MIN4	vec4(ENTROPY_MIN,ENTROPY_MIN,ENTROPY_MIN,0)
+#define ENTROPY_MAX4	vec4(ENTROPY_MAX,ENTROPY_MAX,ENTROPY_MAX,1)
+#define dataFetch(t)	Lerp( ENTROPY_MIN4, ENTROPY_MAX4, texelFetch(t,ivec2(Cubexy),0) )
+
+
 vec3 GetLocalPosition(int v)
 {
 	int x = ivec4(915775499,923195439,642272978,49129)[v/30]>>v%30;
@@ -26,8 +33,9 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 	int u = CubeIndex % textureSize(PositionsTexture,0).x;
 	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
 
-	vec4 OldPosition4 = texelFetch( OldPositionsTexture, ivec2(u,v), 0 );
-	vec4 Position4 = texelFetch( PositionsTexture, ivec2(u,v), 0 );
+	vec2 Cubexy = vec2(u,v);
+	vec4 OldPosition4 = dataFetch(OldPositionsTexture);
+	vec4 Position4 = dataFetch(PositionsTexture);
 	Rand1 = Position4.w;
 	vec3 WorldPosition = Position4.xyz;
 
@@ -39,8 +47,8 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 }
 
 float VelocityStretch = 4.0;
-#define ENABLE_STRETCH	(CubeIndex != DATALAST)
-//#define ENABLE_STRETCH	false
+//#define ENABLE_STRETCH	(FLOAT_TARGET && CubeIndex != DATALAST)
+#define ENABLE_STRETCH	false
 
 vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPosition)
 {
@@ -50,7 +58,8 @@ vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPositio
 
 	int u = CubeIndex % textureSize(PositionsTexture,0).x;
 	int v = (CubeIndex/ textureSize(PositionsTexture,0).y);
-	Velocity = texelFetch( NewVelocitys, ivec2(u,v), 0 );
+	vec2 Cubexy = vec2(u,v);
+	Velocity = dataFetch(NewVelocitys);
 
 	vec4 WorldPos = LocalToWorldTransform * vec4(LocalPosition,1.0);
 	WorldPos.xyz *= WorldPos.www;
@@ -121,6 +130,11 @@ ${NmeMeta}
 
 void main()
 {
+	//if ( FLOAT_TARGET )
+	{
+		FragColor = vec4(0,1,0,1);
+//		return;
+	}
 	vec4 Vel4 = Velocity;
 	vec3 rgb = vec3(1,0,1);
 

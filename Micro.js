@@ -11,6 +11,7 @@ let NmeDeadCount = 0;
 let HeartHitCooldown;
 let MAXLIVES=3;
 let Lives;
+let DRAWFLOOR=0;
 function GetTime(){	return Math.floor(performance.now());	}
 
 function ResetGame()
@@ -20,8 +21,6 @@ function ResetGame()
 	NmeLiveCount = 0;
 	NmeCount = 0;
 	NmeDeadCount = 0;
-	//AllocTextures(PositionTextures,InitPositionPixel);
-	//AllocTextures(VelocityTextures,InitVelocityPixel);
 }
 
 let rc;
@@ -167,8 +166,9 @@ const Macros =
 	STRINGCOUNT:2,
 	WAVEPOSITIONCOUNT:128,
 	HEARTCOOLDOWNFRAMES:4*60,
+	ENTROPY_MIN:0.0,
+	ENTROPY_MAX:10.0,
 };
-const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 Object.assign(window,Macros);
 
 function PadArray(a,Length,Fill)
@@ -221,6 +221,7 @@ const plerp=()=>lerp();
 
 function CompileShader(Type,Source)
 {
+	const MacroSource = Object.entries(Macros).map(kv=>`#define ${kv[0]} ${kv[1]}`).join('\n');
 	const Shader = gl.createShader(Type);
 	Source = `#version 300 es\nprecision highp float;\n${MacroSource}\n${Source}`;
 	gl.shaderSource( Shader, Source );
@@ -246,7 +247,7 @@ class RenderContext_t
 		Options.alpha = true;
 		gl = Canvas.getContext('webgl2', Options );
 		FloatTarget = gl.getExtension('EXT_color_buffer_float');
-		Macros.FLOAT_TARGET=FloatTarget?1:0;
+		Macros.FLOAT_TARGET=FloatTarget?true:false;
 		
 		this.CubeShader = this.CreateShader(CubeShader);
 		this.PhysicsPositionShader = this.CreateShader(PhysicsPositionShader);
@@ -312,9 +313,10 @@ let WorldMin = [-WORLDW,FLOORY,-WORLDSIZE*3,0];
 let WorldMax = [WORLDW,FLOORY,WORLDSIZE*0.4,1];
 let MapPositions = InitArray(DATAHEIGHT,RandomWorldPos);
 
+
 function RandomWorldPos()
 {
-	return WorldMin.map( (Min,i) => lerp(Min,WorldMax[i]) );
+	return WorldMin.map( (Min,i) => lerp(Min*ENTROPY_MAX,WorldMax[i]*ENTROPY_MAX) );
 }
 
 function InitPositionPixel(_,i)
@@ -616,7 +618,7 @@ function Render(w,h)
 	SetUniformTexture('NewVelocitys',2,VelocityTextures[NEW]);
 	
 	let IndexCount = 6*2*3;
-	gl.drawArrays(gl.TRIANGLES,0,IndexCount*(DATALAST+1));
+	gl.drawArrays(gl.TRIANGLES,0,IndexCount*(DATALAST+DRAWFLOOR));
 }
 
 

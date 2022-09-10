@@ -1,7 +1,13 @@
 export const NmeMeta =
 `
 
-#define dataFetch(t)	texelFetch(t,ivec2(Cubexy),0)
+//#define Range(mn,mx,v)	clamp( (v-mn)/(mx-mn), 0.0, 1.0 )
+#define Range(mn,mx,v)	( (v-mn)/(mx-mn) )
+#define Lerp(mn,mx,v)	( mn + ((mx-mn)*v) )
+#define ENTROPY_MIN4	vec4(ENTROPY_MIN,ENTROPY_MIN,ENTROPY_MIN,0)
+#define ENTROPY_MAX4	vec4(ENTROPY_MAX,ENTROPY_MAX,ENTROPY_MAX,1)
+#define dataFetch(t)	Lerp( ENTROPY_MIN4, ENTROPY_MAX4, texelFetch(t,ivec2(Cubexy),0) )
+#define dataWrite(v)	Range( ENTROPY_MIN4.xyz,ENTROPY_MAX4.xyz,v)
 
 #define ss(s)		vec2(CUBESIZE*s,0)
 #define SpriteMats(worldtrans,s0)	mat4(s0.xyyy,s0.yxyy,s0.yyxy,vec4(worldtrans,1))
@@ -135,6 +141,9 @@ void main()
 	Colour = dataFetch(OldPositions);
 	vec3 xyz = Colour.xyz;
 
+ //Vel4.xyz = vec3(0);
+
+	//if ( true )
 	if ( FirstFrame )
 	//if ( FirstFrame || Type_IsSprite )
 	{
@@ -164,7 +173,9 @@ void main()
 	if ( Slot_IsProjectile && ProjectilePos[Projectilei].w > 0.0 )
 		xyz = ProjectilePos[Projectilei].xyz;
 
-	Colour.xyz = xyz;
+	//xyz = vec3((Cubexy.xy-50.0)*0.10,0);
+
+	Colour.xyz = dataWrite(xyz);
 }
 `;
 
