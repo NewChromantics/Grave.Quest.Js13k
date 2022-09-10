@@ -41,6 +41,12 @@ export default class Camera
 	//GetProjectionMatrix(ViewRect)
 	GetProjectionMatrix(Viewport)
 	{
+		//	gr: match quest projection;
+		//	0.9172857999801636, 0, 0, 0,
+		//	0, 0.8686715364456177, 0, 0,
+		//	0.17407210171222687, -0.035242434591054916, -1.0001999139785767, -1,
+		//	0, 0, -0.2000199854373932, 0
+		
 		let ViewRect = [0,0,Viewport[2]/Viewport[3],1];
 			
 		//	overriding user-provided matrix
@@ -51,13 +57,13 @@ export default class Camera
 		let fy = 1.0 / Math.tan( DegToRad*FovV / 2);
 		let fx = fy / Aspect;
 		
-		let Depth = (-Near-Far) / (Near-Far);
+		let Depth = (Near+Far) / (Near-Far);
 		let DepthTrans = (2*Far*Near) / (Near-Far);
 		let s=0,cx=0,cy=0;
 		return [
 			fx,s,cx,0,
 			0,fy,cy,0,
-			0,0,Depth,1,
+			0,0,Depth,-1,
 			0,0,DepthTrans,0
 		];
 	}
