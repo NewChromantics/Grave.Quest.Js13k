@@ -26,6 +26,7 @@ function ResetGame()
 
 let rc;
 let gl;
+let FloatTarget;
 
 const OLD=0;
 const NEW=1;
@@ -244,7 +245,8 @@ class RenderContext_t
 		Options.premultipliedAlpha = false;
 		Options.alpha = true;
 		gl = Canvas.getContext('webgl2', Options );
-		const RenderToFloat = gl.getExtension('EXT_color_buffer_float');
+		//FloatTarget = gl.getExtension('EXT_color_buffer_float');
+		Macros.FLOAT_TARGET=FloatTarget?1:0;
 		
 		this.CubeShader = this.CreateShader(CubeShader);
 		this.PhysicsPositionShader = this.CreateShader(PhysicsPositionShader);
@@ -421,6 +423,7 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 			Blit(VelocityTextures,rc.PhysicsVelocityShader,ReadGpuState);
 		}
 		Blit(PositionTextures,rc.PhysicsPositionShader);
+		
 		Render(Canvas.width,Canvas.height);
 		//ReadGpuState();
 		PostFrame();
@@ -500,13 +503,17 @@ function AllocTextures(Textures,PixelData)
 	PixelData = typeof PixelData!='function' ? PixelData : new Float32Array(InitArray(w*h,PixelData).flat(2));
 	
 	const SourceFormat = gl.RGBA;
-	const SourceType = gl.FLOAT;
-	const InternalFormat = gl.RGBA32F;	//	webgl2
+	
+	const SourceType = FloatTarget ? gl.FLOAT : gl.UNSIGNED_BYTE;
+	const InternalFormat = FloatTarget ? gl.RGBA32F : gl.RGBA;
+	if ( !FloatTarget )
+		PixelData = new Uint8Array(PixelData);
 
 	for ( let t of [OLD,NEW] )
 	{
 		Textures[t] = Textures[t]||gl.createTexture();
 		Textures[t].Size = [w,h];
+		Textures[t].Type = SourceType;
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D,Textures[t]);
 		gl.texImage2D(gl.TEXTURE_2D,0,InternalFormat,w,h,0,SourceFormat,SourceType,PixelData);
@@ -625,9 +632,25 @@ function Blit(Textures,Shader,PostFunc)
 	gl.bindFramebuffer( gl.FRAMEBUFFER, TextureTarget );
 	gl.bindTexture( gl.TEXTURE_2D, null );
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, Target, 0 );
+/*
+	const Target = {};
+	Target.Size=[200,200];
+	gl.bindFramebuffer( gl.FRAMEBUFFER, null );
+*/
+
+	let Status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+	if ( Status != gl.FRAMEBUFFER_COMPLETE )
+		console.log(`Framebuffer status ${Status}`);
+	
 	Pass(...Target.Size);
 	gl.disable( gl.BLEND );
-
+	/*
+	gl.disable(gl.SCISSOR_TEST);
+	gl.disable(gl.CULL_FACE);
+	gl.clearColor(1,0,0,1);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.enable(gl.DEPTH_TEST);
+*/
 	BindShader( Shader );
 
 	UpdateUniforms();
@@ -642,8 +665,7 @@ function Blit(Textures,Shader,PostFunc)
 
 	gl.drawArrays(gl.TRIANGLE_FAN,0,4);
 	
-	if ( PostFunc )
-		PostFunc(Textures);
+	if ( PostFunc )PostFunc(Textures);
 }
 
 
@@ -707,9 +729,9 @@ async function ReadTexture(Target)
 {
 	ReadBuffer = ReadBuffer || gl.createBuffer();
 	
-	const PixelBuffer = new Float32Array(DATAWIDTH*DATAHEIGHT*4);
+	const PixelBuffer = new (Target.Type==gl.FLOAT?Float32Array:Uint8Array)(DATAWIDTH*DATAHEIGHT*4);
 	
-	gl.readPixels( 0, 0, DATAWIDTH, DATAHEIGHT, gl.RGBA, gl.FLOAT, PixelBuffer );
+	gl.readPixels( 0, 0, DATAWIDTH, DATAHEIGHT, gl.RGBA, Target.Type, PixelBuffer );
 	return PixelBuffer;
 	/*
 	
