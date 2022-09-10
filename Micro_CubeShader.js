@@ -47,8 +47,8 @@ mat4 GetLocalToWorldTransform(int CubeIndex,vec3 LocalPosition)
 }
 
 float VelocityStretch = 4.0;
-//#define ENABLE_STRETCH	(FLOAT_TARGET && CubeIndex != DATALAST)
-#define ENABLE_STRETCH	false
+#define ENABLE_STRETCH	(FLOAT_TARGET && CubeIndex != DATALAST)
+//#define ENABLE_STRETCH	false
 
 vec3 GetWorldPosition(int CubeIndex,mat4 LocalToWorldTransform,vec3 LocalPosition)
 {

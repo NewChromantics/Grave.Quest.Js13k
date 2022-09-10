@@ -38,8 +38,11 @@ export default class Camera
 		this.LookAt = [ 0,0,0 ];
 	}
 		
-	GetProjectionMatrix(ViewRect)
+	//GetProjectionMatrix(ViewRect)
+	GetProjectionMatrix(Viewport)
 	{
+		let ViewRect = [0,0,Viewport[2]/Viewport[3],1];
+			
 		//	overriding user-provided matrix
 		if ( this.ProjectionMatrix )
 			return this.ProjectionMatrix;

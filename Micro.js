@@ -3,6 +3,7 @@ import * as PhysicsPositionShader from './Micro_PhysicsPositionShader.js'
 import * as PhysicsVelocityShader from './Micro_PhysicsVelocityShader.js'
 
 import DesktopXr from './DesktopXr.js'
+import {CreateXr} from './WebXr.js'
 
 let NmePixelCount = 0;
 let NmeLiveCount = 0;
@@ -11,7 +12,7 @@ let NmeDeadCount = 0;
 let HeartHitCooldown;
 let MAXLIVES=3;
 let Lives;
-let DRAWFLOOR=0;
+let DRAWFLOOR=1;
 function GetTime(){	return Math.floor(performance.now());	}
 
 function ResetGame()
@@ -167,7 +168,7 @@ const Macros =
 	WAVEPOSITIONCOUNT:128,
 	HEARTCOOLDOWNFRAMES:4*60,
 	ENTROPY_MIN:0.0,
-	ENTROPY_MAX:10.0,
+	ENTROPY_MAX:1.0,
 };
 Object.assign(window,Macros);
 
@@ -403,6 +404,26 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	//AllocTextures(VelocityTextures,InitVelocityPixel);
 	AllocTextures(SpriteTextures,PixelRows);
 
+	function OnRender(Camera)
+	{
+		Render(Camera);
+	}
+	function OnInput()
+	{
+		
+	}
+	
+	async function XrThread()
+	{
+		while(XrOnWaitForCallback)
+		{
+			let XrDevice = await CreateXr(gl,OnRender,OnInput,XrOnWaitForCallback);
+			await XrDevice.WaitForEnd;
+		}
+	}
+	XrThread();
+	
+	
 	State=new State_Start()
 	
 	function Tick()
@@ -426,7 +447,13 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		}
 		Blit(PositionTextures,rc.PhysicsPositionShader);
 		
-		Render(Canvas.width,Canvas.height);
+		
+		const Camera = Desktop.Camera;
+		Camera.Viewport = [0,0,Canvas.width,Canvas.height];
+		Camera.Alpha = 1;
+		Camera.FrameBuffer = null;
+	
+		Render(Camera);
 		//ReadGpuState();
 		PostFrame();
 		if ( State.Time == 0 )
@@ -556,10 +583,13 @@ function SetUniformTexture(Name,TextureIndex,Texture)
 }
 
 
-function Pass(w,h)
+function Pass(Viewport)
 {
-	gl.viewport(0,0,w,h);
+	gl.viewport(...Viewport);
 	gl.disable(gl.CULL_FACE);
+	//	required for quest
+	gl.scissor( ...Viewport );
+	gl.enable(gl.SCISSOR_TEST);
 }
 
 
@@ -598,13 +628,11 @@ function UpdateUniforms()
 	SetUniformVector('WavePositions',WavePositions.flat(2));
 }
 
-function Render(w,h)
+function Render(Camera)
 {
-	let Camera = Desktop.Camera;
-
-	gl.bindFramebuffer( gl.FRAMEBUFFER, null );
-	Pass(w,h);
-	gl.clearColor(...ClearColour);
+	gl.bindFramebuffer( gl.FRAMEBUFFER, Camera.FrameBuffer );
+	Pass(Camera.Viewport);
+	gl.clearColor(...ClearColour,Camera.Alpha);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	gl.enable(gl.DEPTH_TEST);
 	
@@ -612,7 +640,7 @@ function Render(w,h)
 
 	UpdateUniforms();
 	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
-	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix([0,0,w/h,1]));
+	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix(Camera.Viewport));
 	SetUniformTexture('PositionsTexture',0,PositionTextures[NEW]);
 	SetUniformTexture('OldPositionsTexture',1,PositionTextures[OLD]);
 	SetUniformTexture('NewVelocitys',2,VelocityTextures[NEW]);
@@ -644,7 +672,7 @@ function Blit(Textures,Shader,PostFunc)
 	if ( Status != gl.FRAMEBUFFER_COMPLETE )
 		console.log(`Framebuffer status ${Status}`);
 	
-	Pass(...Target.Size);
+	Pass([0,0,...Target.Size]);
 	gl.disable( gl.BLEND );
 	/*
 	gl.disable(gl.SCISSOR_TEST);
