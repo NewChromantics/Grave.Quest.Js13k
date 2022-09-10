@@ -408,9 +408,9 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	{
 		Render(Camera);
 	}
-	function OnInput()
+	function OnInput(Input)
 	{
-		
+		Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
 	}
 	
 	async function XrThread()
@@ -503,6 +503,7 @@ function Update()
 {
 	let Input = Desktop.GetInput();
 	Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
+	
 	HeartHitCooldown=Math.max(0,HeartHitCooldown-1);
 }
 

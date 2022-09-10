@@ -1649,7 +1649,9 @@ class Device_t
 		this.Session = Session;
 		this.ReferenceSpace = ReferenceSpace;
 		this.OnRender = OnRender;
+		this.OnInput = OnInput;
 		this.WaitForEnd = CreatePromise();
+		this.Inputs={};
 		Session.addEventListener('end',this.WaitForEnd.Resolve);
 	}
 	
@@ -1715,7 +1717,61 @@ class Device_t
 	
 	FrameUpdate_Input(Frame,Pose)
 	{
-		const FrameInputs = Array.from(Frame.session.inputSources);
+		let RefSpace = this.ReferenceSpace;
+		function GetPose(XrSpace)
+		{
+			let Pose = XrSpace ? Frame.getPose(XrSpace,RefSpace) : null;
+			return Pose ? new DOMMatrix(Pose.transform.matrix) : null;
+		}
+
+		//	de-activate prev states
+		Object.entries(this.Inputs).forEach(e=>e[1].Active=false);
+		
+		let EnumInput = (Name,Down,XrSpace)=>
+		{
+			let Trans = GetPose(XrSpace);
+			let In = this.Inputs[Name];
+			if ( !Trans && !In )	return;
+			In = In||{};
+			In.Transform = Trans||In.Transform;
+			In.Active = Trans!=null;
+			In.Down = Down && In.Active;
+			this.Inputs[Name] = In;
+		}
+		
+		function IterateInput(Input,Index)
+		{
+			//	gr: this input name is not unique enough yet!
+			const InputName = Input.handedness;
+			//	treat joints as individual inputs as they all have their own pos
+			/*if ( Input.hand )
+			{
+				const HandInputs = ExtractHandInputs( Input.hand, InputName, GetPose.bind(this) );
+				for ( let Input of HandInputs )
+				{
+					UpdateInputNode( Input.PoseSpace, Input.Name, Input.Buttons, Input.ExtraData );
+				}
+			}
+			else//	normal controller, but on quest, this is also the center of the hand with the finger-click button0
+			 */
+			//	so we should make use of these buttons for a "palm" finger
+			if ( Input.gamepad )
+			{
+				if (!Input.gamepad.connected)
+					return;
+				
+				const AnyDown = (Input.gamepad.buttons||[]).some(x=>x.pressed);
+				EnumInput(InputName,AnyDown,Input.targetRaySpace);
+			}
+			else
+			{
+				console.warn(`Ignoring input ${InputName} #${Index}`);
+			}
+		}
+		
+		let Inputs = Array.from(Frame.session.inputSources);
+		Inputs.forEach(IterateInput.bind(this));
+		this.OnInput(this.Inputs);
 	}
 }
 
