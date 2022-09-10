@@ -245,7 +245,7 @@ class RenderContext_t
 		Options.premultipliedAlpha = false;
 		Options.alpha = true;
 		gl = Canvas.getContext('webgl2', Options );
-		//FloatTarget = gl.getExtension('EXT_color_buffer_float');
+		FloatTarget = gl.getExtension('EXT_color_buffer_float');
 		Macros.FLOAT_TARGET=FloatTarget?1:0;
 		
 		this.CubeShader = this.CreateShader(CubeShader);
