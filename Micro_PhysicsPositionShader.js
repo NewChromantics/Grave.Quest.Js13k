@@ -86,7 +86,7 @@ uniform mat4 String[STRINGCOUNT];
 #define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
 #define CharNull		(Charw==0)
 
-#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.7,-1.1)) * sxyz ).xyz
+#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.6,-1.5)) * sxyz ).xyz
 #define HeartPos0		HeartPos(vec4(0,0,0,1))
 #define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
