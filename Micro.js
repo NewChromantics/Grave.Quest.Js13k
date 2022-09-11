@@ -60,7 +60,7 @@ const Sprites = [
 	"a13b2a9b2a9b2a9b2a7b6a5", //	T
 	"a11b2a2b1a6b5a6b2a2b1a6b2a2b1a7b3a7", //	A
 	"a11b2a2b1a6b4a7b2a2b1a6b2a2b1a6b4a7", //	R
-	"a11b2a9b2a9b4a7b2a2b1a6b4a7", //	P
+	"a11b2a9b4a7b2a2b1a6b2a2b1a6b4a7", //	P
 	"a11b5a6b2a9b4a7b2a10b4a6", //	E
 	"a11b2a2b1a6b2a1b2a6b3a1b1a6b2a2b1a6b2a2b1a6", //	N
 	"a11b2a10b2a10b2a8b2a1b1a6b2a3b1a5", //	Y
