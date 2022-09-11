@@ -17,7 +17,7 @@ vec3 GetLocalPosition(int v)
 }
 
 #define FloorCubeSize (FLOORSIZE/CUBESIZE)
-#define FloorTransform	mat4( vec4(FloorCubeSize,0,0,0),	vec4(0,1,0,0),	vec4(0,0,FloorCubeSize,0),	vec4(0,float(FLOORY)-CUBESIZE,0,1) )
+#define FloorTransform	mat4(FloorCubeSize,0,0,0,0,1,0,0,0,0,FloorCubeSize,0,0,float(FLOORY)-CUBESIZE,0,1)
 
 mat4 GetLocalToWorldTransform(vec3 LocalPosition)
 {

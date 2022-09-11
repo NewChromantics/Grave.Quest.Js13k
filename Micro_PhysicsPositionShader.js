@@ -7,9 +7,8 @@ export const NmeMeta =
 #define dataFetch(t)	Lerp( ENTROPY_MIN4, ENTROPY_MAX4, texelFetch(t,ivec2(Cubexy),0) )
 #define dataWrite(v)	Range( ENTROPY_MIN4.xyz,ENTROPY_MAX4.xyz,v)
 
-#define ss(s)		vec2(CUBESIZE*s,0)
-#define SpriteMats(worldtrans,s0)	mat4(s0.xyyy,s0.yxyy,s0.yyxy,vec4(worldtrans,1))
-#define SpriteMat(worldtrans)		SpriteMats(worldtrans,ss(1.0))
+#define SpriteMats(t,s0)	mat4(s0.xyyy,s0.yxyy,s0.yyxy,t,1)
+#define SpriteMat(t)		SpriteMats(t,vec2(CUBESIZE*1.0,0))
 
 uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
@@ -18,8 +17,6 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
 //	sprite local pos centered
 #define SpriteXyzw(si,wh)	vec4(texelFetch(SpritePositions,ivec2(Cubexy.x,si),0).xyz-(wh/2.0),1)
-//#define SpriteXyzw(si,wh)	vec4(vec3(2.5,5.0,0)-(wh/2.0),1)
-//#define SpriteXyzw(si,wh)	vec4(vec3(0.0,0.0,0),1)
 
 #define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-10))
 
@@ -37,7 +34,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
 //	voxel slots are frag y (should pack these into index, but we use .x for sprite index)
 //	only to be used in blits
-#if !defined(Cubexy)
+#ifndef Cubexy
 #define Cubexy			gl_FragCoord
 #endif
 #define					FragIndex	(int(Cubexy.x) + (int(Cubexy.y)*DATAWIDTH))
@@ -116,21 +113,19 @@ uniform sampler2D SpritePositions;
 `;
 
 export const Vert =
-`//	quad crammed into vec4s
-#define u4 vec4(0,1,1,0)
-#define v4 vec4(0,0,1,1)
+`
 out vec2 uv;
 void main()
 {
-	#define CASE(x) case x:uv=vec2(u4[x],v4[x]);break;
+#define c(n,u,v)	case n:uv=vec2(u,v);break;
 	switch(gl_VertexID)
 	{
-	CASE(0)
-	CASE(1)
-	CASE(2)
-	CASE(3)
+c(0,0,0)
+c(1,1,0)
+c(2,1,1)
+c(3,0,1)
 	}
-	gl_Position = vec4( uv*2.0-1.0, 0, 1 );	//	0..1 -> -1..1
+	gl_Position=vec4(uv*2.0-1.0,0,1);
 }
 `;
 
@@ -160,9 +155,6 @@ void main()
 	{
 		xyz += Vel4.xyz * TIMESTEP;
 	}
-
-	//	char disapearing fix. not sure why
-	if ( Slot_IsChar ) xyz = CharXyz;
 
 	//	new projectile data
 	if ( Slot_IsProjectile && ProjectilePos[Projectilei].w > 0.0 )
