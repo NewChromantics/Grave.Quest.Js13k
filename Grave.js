@@ -1080,6 +1080,7 @@ class State_Click
 {
 	constructor(NextState)
 	{
+		zzfx(...[,,446,,.07,,,.1,-8.5,-1,,,,,,,,.49,.09]); // Jump 262
 		this.NextState=NextState;
 		this.WasDown={};
 	}
@@ -1100,6 +1101,7 @@ class State_Start extends State_Click
 {
 	constructor()
 	{
+		zzfx(...[,,446,,.07,,,.1,-8.5,-1,,,,,,,,.49,.09]); // Jump 262
 		super(State_Game);
 		this.Time=0;
 		ForcedString = 'PRESS ANY  BUTTON!';
@@ -1110,13 +1112,18 @@ class State_Game
 {
 	constructor()
 	{
+		this.InGame=true;
 		this.Time=0;
 		ForcedString = null;
 		ResetGame();
 	}
 	async Update()
 	{
-		NmeLiveCount = Math.floor(this.Time/2000);
+		let OldNmeCount = NmeLiveCount;
+		NmeLiveCount = Math.floor(this.Time/2000);;
+		if ( OldNmeCount != NmeLiveCount )
+			zzfx(...[1.78,,322,.05,.16,.32,1,.52,,-6.5,4,.03,.03,.1,4.7,.2,.12,.64,.13]); // Powerup 163
+
 		return Lives>0?this:new State_End;
 	}
 	UpdateInput(Name,State)
@@ -1226,6 +1233,7 @@ function FireWeapon(Name,Transform)
 	ProjectilePos[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( 0, 0, lerp(0,-1) );
 	ProjectileVel[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(-80,-90), 0 );
 	ProjectileIndex++;
+	zzfx(...[1.35,,172,.01,.06,.01,3,.2,-4.1,,,,,1.5,,,.01,.83,.02,.35]); // Shoot 153
 }
 
 function UpdateWeapon(Name,State)
@@ -1450,17 +1458,32 @@ async function ReadGpuState(Textures)
 	const Velocities = await ReadTexture( Textures[NEW] );
 	const Velw = Velocities.filter((v,i)=>(i%4)==3);
 	
+	let OldKilled = (NmeLiveCount-NmeCount);
+	
 	const NmeMap = {};
 	const Nmes = Velw.filter( w => w>=SPRITE0 ).forEach( w=>NmeMap[w]=(NmeMap[w]||0)+1 );
 	NmePixelCount = Velw.filter( w => w>=SPRITE0 ).length;
 	NmeCount = Object.keys(NmeMap).length;
+	let OldNmeDeadCount = NmeDeadCount;
 	NmeDeadCount = Object.values(NmeMap).filter(c=>c==0).length;
+	
+	let PlayedHeartSound = false;
 	let HeartDebrisCount = Velw.filter( w => w==DEBRISHEART ).length;
 	//	new heart debris
 	if ( HeartDebrisCount>0 && HeartHitCooldown==0 )
 	{
 		Lives--;
+		if ( State.InGame )
+			zzfx(...[2.07,,89,.01,.1,.6,3,3.76,.9,,,,,1.6,29,.4,.27,.41,.04,.36]); // Explosion 91
+		PlayedHeartSound = true;
 		HeartHitCooldown = HEARTCOOLDOWNFRAMES+1;
+	}
+	
+	let Killed = (NmeLiveCount-NmeCount);
+	if ( !PlayedHeartSound && Killed > OldKilled )
+	{
+		if ( State.InGame )
+			zzfx(...[2.7,,851,.02,.06,.15,1,1.55,-1.8,,41,.06,,,,,.06,.83,.04]); // Pickup 215
 	}
 }
 
@@ -1698,3 +1721,21 @@ async function CreateXr(OnWaitForCallback)
 	await Device.InitLayer();
 	return Device;
 }
+
+
+//	sound library https://github.com/KilledByAPixel/ZzFX
+let zzfx,zzfxV,zzfxX
+
+// ZzFXMicro - Zuper Zmall Zound Zynth - v1.1.8 ~ 884 bytes minified
+zzfxV=.3    // volume
+zzfx=       // play sound
+(p=1,k=.05,b=220,e=0,r=0,t=.1,q=0,D=1,u=0,y=0,v=0,z=0,l=0,E=0,A=0,F=0,c=0,w=1,m=0,B=0)=>{let
+M=Math,R=44100,d=2*M.PI,G=u*=500*d/R/R,C=b*=(1-k+2*k*M.random(k=[]))*d/R,g=0,H=0,a=0,n=1,I=0
+,J=0,f=0,x,h;e=R*e+9;m*=R;r*=R;t*=R;c*=R;y*=500*d/R**3;A*=d/R;v*=d/R;z*=R;l=R*l|0;for(h=e+m+
+r+t+c|0;a<h;k[a++]=f)++J%(100*F|0)||(f=q?1<q?2<q?3<q?M.sin((g%d)**3):M.max(M.min(M.tan(g),1)
+,-1):1-(2*g/d%2+2)%2:1-4*M.abs(M.round(g/d)-g/d):M.sin(g),f=(l?1-B+B*M.sin(d*a/l):1)*(0<f?1:
+-1)*M.abs(f)**D*p*zzfxV*(a<e?a/e:a<e+m?1-(a-e)/m*(1-w):a<e+m+r?w:a<h-c?(h-a-c)/t*w:0),f=c?f/
+2+(c>a?0:(a<h-c?1:(h-a)/c)*k[a-c|0]/2):f),x=(b+=u+=y)*M.cos(A*H++),g+=x-x*E*(1-1E9*(M.sin(a)
++1)%2),n&&++n>z&&(b+=v,C+=v,n=0),!l||++I%l||(b=C,u=G,n=n||1);p=zzfxX.createBuffer(1,h,R);p.
+getChannelData(0).set(k);b=zzfxX.createBufferSource();b.buffer=p;b.connect(zzfxX.destination
+);b.start();return b};zzfxX=new (window.AudioContext||webkitAudioContext) // audio context
