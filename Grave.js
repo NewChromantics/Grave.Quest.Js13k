@@ -93,11 +93,12 @@ uniform mat4 String[STRINGCOUNT];
 #define HeartPos0		HeartPos(vec4(ooo1))
 #define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
-uniform vec3 Heart;
+uniform vec4 Heart;
 #define HeartCooldown	int(Heart.y)
 #define Livesf			max(0.0,Heart.x)
 #define Dead			(Livesf<1.0)
 #define FirstFrame		(Heart.z<=0.0)
+#define NmeLiveCount	Heart.w
 
 uniform mat4 CameraToWorld;
 
@@ -189,11 +190,13 @@ vec3 GetLocalPosition(int v)
 
 #define FloorCubeSize (FLOORSIZE/CUBESIZE)
 #define FloorTransform	mat4(FloorCubeSize,0,ooo1,oooo,FloorCubeSize,0,0,float(FLOORY)-CUBESIZE,0,1)
+#define WEAPON_SCALE		0.3
+#define WEAPON_SCALE_MAT	mat4( WEAPON_SCALE,0,0,0,	0,WEAPON_SCALE,0,0,	0,0,WEAPON_SCALE,0,	0,0,0,1 )
 
 mat4 GetLocalToWorldTransform()
 {
 	if ( Slot_IsFloor )	return FloorTransform;
-	if ( Slot_IsWeapon )	return WeaponPoses[Weaponi];
+	if ( Slot_IsWeapon )	return WeaponPoses[Weaponi]*WEAPON_SCALE_MAT;
 
 
 	vec4 OldPosition4 = dataFetch(OldPositions);
@@ -385,7 +388,6 @@ vec3 hash32(vec2 p)
 
 #define MOVINGf	(Type_IsDebris?1.0:0.0)
 
-uniform float NmeLiveCount;
 #define Vel Vel4.xyz
 
 void main()
@@ -507,6 +509,10 @@ void main()
 	Vel = dataWrite(Vel);
 }
 `;
+function Dot3(a,b)
+{
+	return (a[0]*b[0]) + (a[1]*b[1]) + (a[2]*b[2]);
+}
 
 function Subtract3(a,b)
 {
@@ -909,9 +915,9 @@ const Macros =
 	DATAHEIGHT:128,
 	DATALAST:127*127+1,
 	MAX_PROJECTILES:30,
-	MAX_WEAPONS:10,
-	MAX_ACTORS:100,
-	WAVEPOSITIONCOUNT:100,
+	MAX_WEAPONS:30,
+	MAX_ACTORS:50,
+	WAVEPOSITIONCOUNT:50,
 	TIMESTEP:0.016666,
 	FLOORY:0.0,
 	CUBESIZE:0.06,
@@ -962,6 +968,8 @@ let ProjectileIndex = 0;
 let ProjectilePos = InitArray(MAX_PROJECTILES,x=>oooo);
 let ProjectileVel = InitArray(MAX_PROJECTILES,x=>oooo);
 let WeaponPoses = {}
+let FiredWeaponThisFrame=0;
+let WEAPON_SOUND_DELAY_FRAMES = 4;
 let WeaponLastFired = {};	//	[Input] = FiredTime
 let ClearColour=[0.03,0.13,0.03];
 let Desktop;
@@ -1250,7 +1258,13 @@ function FireWeapon(Name,Transform)
 	ProjectilePos[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( 0, 0, lerp(0,-1) );
 	ProjectileVel[ProjectileIndex%MAX_PROJECTILES] = TransformPoint( lerp(-1,1), lerp(0,0), lerp(-80,-90), 0 );
 	ProjectileIndex++;
-	zzfx(...[1.35,,172,.01,.06,.01,3,.2,-4.1,,,,,1.5,,,.01,.83,.02,.35]); // Shoot 153
+
+	//	delay sound as its a bit intense on quest
+	if ( FiredWeaponThisFrame <= 0 )
+	{
+		zzfx(...[1.35,,172,.01,.06,.01,3,.2,-4.1,,,,,1.5,,,.01,.83,.02,.35]); // Shoot 153
+		FiredWeaponThisFrame = WEAPON_SOUND_DELAY_FRAMES;
+	}
 }
 
 function UpdateWeapon(Name,State)
@@ -1277,6 +1291,7 @@ function PostFrame()
 {
 	ProjectilePos.forEach(p=>p[3]=0);
 	ProjectileVel.forEach(p=>p[3]=0);
+	FiredWeaponThisFrame--;
 }
 
 function InitTexture()
@@ -1377,7 +1392,7 @@ function UpdateUniforms()
 	SetUniformStr('String',ForcedString||Str);
 	
 	SetUniformVector('Random4',oooo.map(plerp));
-	SetUniformVector('Heart',[Lives,HeartHitCooldown,State.Time]);
+	SetUniformVector('Heart',[Lives,HeartHitCooldown,State.Time,NmeLiveCount]);
 
 	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
 	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
@@ -1578,6 +1593,134 @@ function GetXrAlpha(BlendMode)
 	}
 }
 
+
+
+function GetStraightnessOfPoints(Positions)
+{
+	if ( Positions.length < 2 )	return 0;
+	
+	let Directions = [];
+	for ( let i=1;	i<Positions.length;	i++ )
+	{
+		const Prev = Positions[i-1];
+		const Next = Positions[i-0];
+		const Direction = Normalise3(Subtract3(Prev,Next));
+		Directions.push(Direction);
+	}
+	let Dots = [];
+	for ( let i=1;	i<Directions.length;	i++ )
+	{
+		const Prev = Directions[i-1];
+		const Next = Directions[i-0];
+		const Dot = Dot3(Prev,Next);
+		Dots.push(Dot);
+	}
+	
+	let TotalDot = 1;
+	//	mult, or average?
+	for ( let Dot of Dots )
+		TotalDot *= Dot;
+	return TotalDot;
+}
+
+function ExtractHandInputs(InputHand,InputName,GetPose,GetPos3)
+{
+	const Joints = Object.fromEntries(InputHand.entries());
+
+	//	divide each finger into it's own input, with trailing bones(joints).
+	//	First joint name is our most important one and is the position of the input
+	//	it then has transforms of its children
+	//	we should have one general one for the hand?
+	function GetRenderFingerSkeleton(Prefix)
+	{
+		return [
+			`${Prefix}-tip`,
+			`${Prefix}-phalanx-distal`,
+			`${Prefix}-phalanx-proximal`,
+			//`${Prefix}-metacarpal`,
+			//`wrist`
+		];
+	}
+	function GetFingerSkeleton(Prefix)
+	{
+		return [
+			`${Prefix}-tip`,
+			`${Prefix}-phalanx-distal`,
+			`${Prefix}-phalanx-proximal`,
+			`${Prefix}-metacarpal`,
+			//`wrist`
+		];
+	}
+	//	these names + skeleton above are standard webxr names (from quest)
+	const FingerNames =
+	[
+		'thumb',
+		'index-finger',
+		'middle-finger',
+		'ring-finger',
+		'pinky-finger'
+	];
+	
+	
+	const StraightnessMin = 0.87;
+	
+	//const InputOriginLocalToWorld = GetJointLocalToWorld('wrist');
+	
+	let Outputs = [];
+	
+	
+	//	each finger is a "button"
+	function EnumFingerInput(FingerName)
+	{
+		let JointNames = GetRenderFingerSkeleton(FingerName);
+		
+		//	get positions
+		let Pointing = false;
+		if ( FingerName=='index-finger' )
+		{
+			let RenderJointNames = GetRenderFingerSkeleton(FingerName);
+			let FingerPoints = RenderJointNames.map( jn => GetPos3(Joints[jn]) ).filter(p=>p!=null);
+			Pointing = GetStraightnessOfPoints(FingerPoints) > StraightnessMin;
+		}
+		
+		for ( let JointName of JointNames )
+		{
+			let Input = {};
+			Input.Name = `${InputName}_${FingerName}_${JointName}`;
+			Input.Down = Pointing && (JointName==JointNames[0]);
+			Input.XrSpace = Joints[JointName];
+			Outputs.push(Input);
+		}
+		/*
+		const JointLocalToWorlds = JointNames.map( GetJointLocalToWorld );
+		const JointSpaces = JointNames.map( jn => Joints[jn] );
+		
+		let Input = {};
+		Input.Name =
+		
+		Name,Down,XrSpace
+		
+		const Input = {};
+		Input.Name = NodeName;
+		Input.PoseSpace = JointSpaces[0];	//	primary joint (tip)
+		Input.ExtraData = {};
+		Input.ExtraData.LocalToWorlds = JointLocalToWorlds;
+		Input.ExtraData.InputOriginLocalToWorld = InputOriginLocalToWorld;
+		//	new system never has buttons down...
+		//	could do a float of how straight fingers are
+		//	or if tip is touching another tip...
+		//	could do both as our input system is all about named buttons
+		//	eg. left-index-finger-outstretched=0.9
+		Input.Buttons = [];
+		
+		return Input;
+		 */
+	}
+	FingerNames.forEach(EnumFingerInput);
+	return Outputs;
+}
+
+
 class XrDev
 {
 	constructor(ReferenceSpace)
@@ -1642,6 +1785,13 @@ class XrDev
 			let Pose = XrSpace ? Frame.getPose(XrSpace,RefSpace) : null;
 			return Pose ? new DOMMatrix(Pose.transform.matrix) : null;
 		}
+		function GetPos3(XrSpace)
+		{
+			let Pose = XrSpace ? Frame.getPose(XrSpace,RefSpace) : null;
+			if ( !Pose )	return null;
+			let Pos = Pose.transform.position;
+			return [Pos.x,Pos.y,Pos.z];
+		}
 
 		//	de-activate prev states
 		Object.entries(this.Inputs).forEach(e=>e[1].Active=false);
@@ -1663,16 +1813,16 @@ class XrDev
 			//	gr: this input name is not unique enough yet!
 			const InputName = Input.handedness;
 			//	treat joints as individual inputs as they all have their own pos
-			/*if ( Input.hand )
+			if ( Input.hand )
 			{
-				const HandInputs = ExtractHandInputs( Input.hand, InputName, GetPose.bind(this) );
+				const HandInputs = ExtractHandInputs( Input.hand, InputName, GetPose, GetPos3 );
 				for ( let Input of HandInputs )
 				{
-					UpdateInputNode( Input.PoseSpace, Input.Name, Input.Buttons, Input.ExtraData );
+					EnumInput(Input.Name,Input.Down,Input.XrSpace);
+					//UpdateInputNode( Input.PoseSpace, Input.Name, Input.Buttons, Input.ExtraData );
 				}
 			}
 			else//	normal controller, but on quest, this is also the center of the hand with the finger-click button0
-			 */
 			//	so we should make use of these buttons for a "palm" finger
 			if ( Input.gamepad )
 			{
