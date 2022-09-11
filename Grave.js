@@ -1042,12 +1042,6 @@ function RleToRgba(rle,i,a,w=SPRITEW)
 	return rle.length?rle:null;
 }
 
-function IsMap(Row)
-{
-	return true;
-	return Row > 4;
-}
-
 function ArrayFromTo(s,e)
 {
 	let a=[];
@@ -1063,10 +1057,9 @@ function InitVelocityPixel(_,i)
 	let MapSprite = MapSprites[Math.floor(Math.random()*MapSprites.length)];
 	let x = i % DATAWIDTH;
 	let y = (i/DATAWIDTH)>>0;
-	let Type = IsMap(y) ? MapSprites[y%MapSprites.length] : SPRITE0;
+	let Type = MapSprites[y%MapSprites.length];
 	return [0,0,0,Type];
 }
-
 
 
 function RandomWorldPos()
@@ -1078,9 +1071,7 @@ function InitPositionPixel(_,i)
 {
 	let x = i % DATAWIDTH;
 	let y = (i/DATAWIDTH)>>0;
-	if ( IsMap(y) )
-		return MapPositions[y].slice(0,3).concat([Math.random()]);
-	return RandomWorldPos(_,i);
+	return MapPositions[y].slice(0,3).concat([Math.random()]);
 }
 
 
