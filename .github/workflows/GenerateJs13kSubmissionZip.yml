@@ -34,14 +34,20 @@ jobs:
           zip -9 ./$OUTPUT_ZIP $ZIP_INPUTS
           ls -l ./$OUTPUT_ZIP
 
+      # mac: stat -f %z
+      # linux: stat -c %s
       - name: Get final zip size
         run: |
-          FILE_SIZE=`stat --format="%z" ./$OUTPUT_ZIP`
+          FILE_SIZE=`stat -c %s ./$OUTPUT_ZIP`
           echo "Final zip size $FILE_SIZE"
           echo "ZIP_SIZE=$FILE_SIZE" >> $GITHUB_ENV
-          
-      - name: Check final zip size
-        if: ${{ env.ZIP_SIZE > 13312 }}
+
+      - name: Fail if final zip size invalid
+        if: ${{ env.ZIP_SIZE+0 == 0 }}
+        run: exit 1
+
+      - name: Fail if final zip size too big
+        if: ${{ env.ZIP_SIZE+0 > 13312 }}
         run: exit 1
       
       - name: Upload Final zip artifact
