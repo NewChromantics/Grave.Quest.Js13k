@@ -1577,9 +1577,6 @@ class XrDev
 	
 	async InitLayer()
 	{
-		this.EnableStencilBuffer = false;
-
-		
 		const Options = {};
 		//	scale down frame buffer size to debug frag vs vert bound
 		//	mentioned here: https://developer.oculus.com/documentation/web/webxr-perf-workflow/
@@ -1587,13 +1584,14 @@ class XrDev
 		Options.antialias = true;
 		this.Layer = new XRWebGLLayer( XrSession, gl, Options );
 		XrSession.updateRenderState({ baseLayer: this.Layer });
-	
+	/*
 		//	https://developer.oculus.com/documentation/web/webxr-ffr/#to-set-and-adjust-ffr-dynamically
 		//	set dynamic FFR...
 		if ( this.Layer.fixedFoveation === undefined )
 			console.warn(`WebXR layer doesn't support FixedFoveationRendering`,this.Layer);
 		else
 			this.Layer.fixedFoveation = 1;
+	 */
 		this.OnFrame(0,null);
 	}
 	
@@ -1687,7 +1685,7 @@ async function CreateXr(OnWaitForCallback)
 {
 	const SessionMode = await GetSupportedSessionMode();
 	if ( SessionMode == false )
-		throw "Browser doesn't support XR.";
+		throw `No XR support`;
 
 	const SessionPromise = CreatePromise();
 	const Callback = function()
@@ -1722,11 +1720,9 @@ async function CreateXr(OnWaitForCallback)
 			}
 			catch{}
 		}
-		throw `Failed to find supported XR reference space`;
+		throw `No XR reference space`;
 	}
 	let ReferenceSpace = await GetReferenceSpace();
-	console.log(`Got XR ReferenceSpace`,ReferenceSpace);
-	
 	let Device = new XrDev(ReferenceSpace);
 	await Device.InitLayer();
 	return Device;
