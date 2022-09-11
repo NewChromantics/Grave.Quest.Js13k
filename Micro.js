@@ -626,24 +626,12 @@ function SetUniformStr(Name,Str)
 
 function UpdateUniforms()
 {
-	//let s = `0123456748901234567890123456789`.split``;
-	//let i = Number((GetTime()/100)%32);
-	//s.splice(i,0,' ');
-	//s = s.join('');
-	
-	{
-		//SetUniformStr('String',s);
-		//SetUniformStr('String',`@${ProjectileIndex} ${GetTime()/1000>>0}!`);
-		let Killed = (NmeLiveCount-NmeCount);
-		
-		let Str = `@@@@@     `.substr(5-Lives).substr(0,5);
-		Str += ` ~${Killed}`;
-		if ( HeartHitCooldown>0 )
-			Str =`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`;
-		//SetUniformStr('String',`~${Killed} ${GetTime()/1000>>0}! @${ProjectileIndex}`);
-		SetUniformStr('String',ForcedString||Str);
-		//SetUniformStr('String',`012345678901234567890123456789`);
-	}
+	let Killed = (NmeLiveCount-NmeCount);
+	let Str = `@@@@@     `.substr(5-Lives).substr(0,5);
+	Str += ` ~${Killed}`;
+	if ( HeartHitCooldown>0 )
+		Str =`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`;
+	SetUniformStr('String',ForcedString||Str);
 	
 	SetUniformVector('Random4',[0,0,0,0].map(plerp));
 	SetUniformVector('Heart',[Lives,HeartHitCooldown,State.Time]);
@@ -652,6 +640,9 @@ function UpdateUniforms()
 	SetUniformVector('ProjectileVel',ProjectileVel.flat(4));
 	SetUniformMat4('WeaponPoses',Object.values(WeaponPoses).flat(4));
 
+	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
+	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
+	SetUniformTexture('SpritePositions',2,SpriteTextures[0]);
 	
 	let WavePositions = Array(WAVEPOSITIONCOUNT).fill().map((x,i)=>GetWavexy(Waves[i%Waves.length],State.Time-(i*2000)));
 	SetUniformVector('WavePositions',WavePositions.flat(2));
@@ -670,9 +661,8 @@ function Render(Camera)
 	UpdateUniforms();
 	SetUniformMat4('WorldToCameraTransform',Camera.WorldToLocal.toFloat32Array());
 	SetUniformMat4('CameraProjectionTransform',Camera.GetProjectionMatrix(Camera.Viewport));
-	SetUniformTexture('PositionsTexture',0,PositionTextures[NEW]);
-	SetUniformTexture('OldPositionsTexture',1,PositionTextures[OLD]);
-	SetUniformTexture('NewVelocitys',2,VelocityTextures[NEW]);
+	SetUniformTexture('NewPositions',3,PositionTextures[NEW]);
+	SetUniformTexture('NewVelocitys',4,VelocityTextures[NEW]);
 	
 	let IndexCount = 6*2*3;
 	gl.drawArrays(gl.TRIANGLES,0,IndexCount*(DATALAST+DRAWFLOOR));
@@ -704,21 +694,11 @@ function Blit(Textures,Shader,CameraToWorld,PostFunc)
 	Pass([0,0,...Target.Size]);
 	gl.disable( gl.BLEND );
 	gl.disable(gl.SCISSOR_TEST);
-	/*
-	gl.disable(gl.SCISSOR_TEST);
-	gl.disable(gl.CULL_FACE);
-	gl.clearColor(1,0,0,1);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	gl.enable(gl.DEPTH_TEST);
-*/
 	BindShader( Shader );
 
 	UpdateUniforms();
 	SetUniformVector('NmeLiveCount',[NmeLiveCount]);
-	SetUniformTexture('OldPositions',0,PositionTextures[OLD]);
-	SetUniformTexture('OldVelocitys',1,VelocityTextures[OLD]);
-	SetUniformTexture('NewPositions',2,PositionTextures[Target!=PositionTextures[NEW]?NEW:OLD]);
-	SetUniformTexture('SpritePositions',3,SpriteTextures[0]);
+	SetUniformTexture('NewPositions',3,PositionTextures[Target!=PositionTextures[NEW]?NEW:OLD]);
 	SetUniformMat4('CameraToWorld',CameraToWorld.toFloat32Array());
 
 	gl.drawArrays(gl.TRIANGLE_FAN,0,4);

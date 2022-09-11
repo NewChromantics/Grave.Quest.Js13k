@@ -1,8 +1,6 @@
 export const NmeMeta =
 `
-
-//#define Range(mn,mx,v)	clamp( (v-mn)/(mx-mn), 0.0, 1.0 )
-#define Range(mn,mx,v)	( (v-mn)/(mx-mn) )
+#define Range(mn,mx,v)	((v-mn)/(mx-mn))
 #define Lerp(mn,mx,v)	( mn + ((mx-mn)*v) )
 #define ENTROPY_MIN4	vec4(ENTROPY_MIN,ENTROPY_MIN,ENTROPY_MIN,0)
 #define ENTROPY_MAX4	vec4(ENTROPY_MAX,ENTROPY_MAX,ENTROPY_MAX,1)
@@ -103,9 +101,18 @@ uniform vec3 Heart;
 
 uniform mat4 CameraToWorld;
 
+uniform vec4 ProjectileVel[MAX_PROJECTILES];
+uniform vec4 ProjectilePos[MAX_PROJECTILES];
+uniform mat4 WeaponPoses[MAX_WEAPONS];
+uniform vec4	Random4;
+uniform sampler2D OldVelocitys;
+uniform sampler2D NewVelocitys;
+uniform sampler2D OldPositions;
+uniform sampler2D NewPositions;
+uniform sampler2D SpritePositions;
+
 #define RAND1			(Pos4.w)
 #define UP				vec3(0,1,0)
-#define INITIAL_POS_RANDOMNESS	0.002
 `;
 
 export const Vert =
@@ -128,60 +135,42 @@ void main()
 `;
 
 export const Frag =
-`out vec4 Colour;
+`out vec4 xyzw;
 in vec2 uv;
-uniform sampler2D OldPositions;
-uniform sampler2D OldVelocitys;
-uniform vec4 ProjectileVel[MAX_PROJECTILES];
-uniform vec4 ProjectilePos[MAX_PROJECTILES];
-uniform mat4 WeaponPoses[MAX_WEAPONS];
-
-uniform sampler2D SpritePositions;
 
 ${NmeMeta}
 
+#define xyz	xyzw.xyz
 void main()
 {
 	vec4 Vel4 = dataFetch(OldVelocitys);
-	Colour = dataFetch(OldPositions);
-	vec3 xyz = Colour.xyz;
-
- //Vel4.xyz = vec3(0);
-
-	//if ( true )
+	xyzw = dataFetch(OldPositions);
+	
 	if ( FirstFrame )
-	//if ( FirstFrame || Type_IsSprite )
 	{
 		xyz = (SpriteMat(xyz)*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz;
 		if ( !Type_IsStatic )
 			xyz = NmePos;	//	if is actor
-		if ( Slot_IsProjectile )
-			xyz = vec3(0,-10,0);
 		if ( Slot_IsHeart )
 			xyz = HeartXyz;
 		if ( Slot_IsChar )
 			xyz = CharXyz;
-		//xyz = mix(xyz,NmePos.xyz, 1.0-INITIAL_POS_RANDOMNESS);
 	}
 	else
 	{
 		xyz += Vel4.xyz * TIMESTEP;
-	
 	}
 
-//	char disapearing fix. not sure why
-  if ( Slot_IsChar ) xyz = CharXyz;
+	//	char disapearing fix. not sure why
+	if ( Slot_IsChar ) xyz = CharXyz;
 
 	//	new projectile data
 	if ( Slot_IsProjectile && ProjectilePos[Projectilei].w > 0.0 )
 		xyz = ProjectilePos[Projectilei].xyz;
 
-	//xyz = vec3((Cubexy.xy-50.0)*0.10,0);
-
 	//	stick to floor
 	xyz.y = max( xyz.y, float(FLOORY) );
-
-	Colour.xyz = dataWrite(xyz);
+	xyz = dataWrite(xyz);
 }
 `;
 

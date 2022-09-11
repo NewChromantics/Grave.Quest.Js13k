@@ -4,14 +4,6 @@ import {NmeMeta} from './Micro_PhysicsPositionShader.js'
 export const Frag =
 `out vec4 Colour;
 in vec2 uv;
-uniform sampler2D OldVelocitys;
-uniform sampler2D OldPositions;
-uniform sampler2D NewPositions;
-uniform sampler2D SpritePositions;
-uniform vec4 ProjectileVel[MAX_PROJECTILES];
-uniform vec4 ProjectilePos[MAX_PROJECTILES];
-
-uniform vec4	Random4;
 
 const float FloorDragMin = 0.3;	//	less = more bounce
 const float FloorDragMax = 0.8;	//	less = more bounce

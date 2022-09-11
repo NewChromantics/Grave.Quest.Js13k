@@ -6,17 +6,6 @@ out vec4 Velocity;
 out float Rand1;
 uniform mat4 WorldToCameraTransform;
 uniform mat4 CameraProjectionTransform;
-uniform sampler2D PositionsTexture;
-uniform sampler2D OldPositionsTexture;
-uniform sampler2D NewVelocitys;
-
-#define Range(mn,mx,v)	( (v-mn)/(mx-mn) )
-#define Lerp(mn,mx,v)	( mn + ((mx-mn)*v) )
-#define ENTROPY_MIN4	vec4(ENTROPY_MIN,ENTROPY_MIN,ENTROPY_MIN,0)
-#define ENTROPY_MAX4	vec4(ENTROPY_MAX,ENTROPY_MAX,ENTROPY_MAX,1)
-#define dataFetch(t)	Lerp( ENTROPY_MIN4, ENTROPY_MAX4, texelFetch(t,ivec2(Cubexy),0) )
-
-uniform mat4 WeaponPoses[MAX_WEAPONS];
 
 #define Cubexy	FragCubexy
 ${NmeMeta}
@@ -36,8 +25,8 @@ mat4 GetLocalToWorldTransform(vec3 LocalPosition)
 	if ( Slot_IsWeapon )	return WeaponPoses[Weaponi];
 
 
-	vec4 OldPosition4 = dataFetch(OldPositionsTexture);
-	vec4 Position4 = dataFetch(PositionsTexture);
+	vec4 OldPosition4 = dataFetch(OldPositions);
+	vec4 Position4 = dataFetch(NewPositions);
 	Rand1 = Position4.w;
 	vec3 WorldPosition = Position4.xyz;
 
