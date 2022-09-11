@@ -1,8 +1,7 @@
 xcuserdata/
 xcshareddata/
 
+# build files
 Grave.zip
-
 Micro.js
-
 Mini.js
