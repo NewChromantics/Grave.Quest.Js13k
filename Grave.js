@@ -1474,7 +1474,7 @@ async function ReadGpuState(Textures)
 	{
 		Lives--;
 		if ( State.InGame )
-			zzfx(...[2.07,,89,.01,.1,.6,3,3.76,.9,,,,,1.6,29,.4,.27,.41,.04,.36]); // Explosion 91
+			zzfx(...[2.07,,89,.01,.1,.6,3,3.76,.9,,,,,1.6,29,.4,.27,.41,.04,.36]);
 		PlayedHeartSound = true;
 		HeartHitCooldown = HEARTCOOLDOWNFRAMES+1;
 	}
@@ -1483,7 +1483,8 @@ async function ReadGpuState(Textures)
 	if ( !PlayedHeartSound && Killed > OldKilled )
 	{
 		if ( State.InGame )
-			zzfx(...[2.7,,851,.02,.06,.15,1,1.55,-1.8,,41,.06,,,,,.06,.83,.04]); // Pickup 215
+			zzfx(...[2.7,,780,.02,.07,.15,1,2.1,-3.4,,-50,.17,,-0.1,,,.06,.83,.15]);
+			//zzfx(...[2.7,,851,.02,.06,.15,1,1.55,-1.8,,41,.06,,,,,.06,.83,.04]);
 	}
 }
 
