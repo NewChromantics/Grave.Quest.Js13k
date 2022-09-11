@@ -1631,23 +1631,13 @@ function ExtractHandInputs(InputHand,InputName,GetPose,GetPos3)
 	//	First joint name is our most important one and is the position of the input
 	//	it then has transforms of its children
 	//	we should have one general one for the hand?
-	function GetRenderFingerSkeleton(Prefix)
-	{
-		return [
-			`${Prefix}-tip`,
-			`${Prefix}-phalanx-distal`,
-			`${Prefix}-phalanx-proximal`,
-			//`${Prefix}-metacarpal`,
-			//`wrist`
-		];
-	}
 	function GetFingerSkeleton(Prefix)
 	{
 		return [
 			`${Prefix}-tip`,
 			`${Prefix}-phalanx-distal`,
 			`${Prefix}-phalanx-proximal`,
-			`${Prefix}-metacarpal`,
+			//`${Prefix}-metacarpal`,
 			//`wrist`
 		];
 	}
@@ -1672,14 +1662,13 @@ function ExtractHandInputs(InputHand,InputName,GetPose,GetPos3)
 	//	each finger is a "button"
 	function EnumFingerInput(FingerName)
 	{
-		let JointNames = GetRenderFingerSkeleton(FingerName);
+		let JointNames = GetFingerSkeleton(FingerName);
 		
 		//	get positions
 		let Pointing = false;
 		if ( FingerName=='index-finger' )
 		{
-			let RenderJointNames = GetRenderFingerSkeleton(FingerName);
-			let FingerPoints = RenderJointNames.map( jn => GetPos3(Joints[jn]) ).filter(p=>p!=null);
+			let FingerPoints = JointNames.map( jn => GetPos3(Joints[jn]) ).filter(p=>p!=null);
 			Pointing = GetStraightnessOfPoints(FingerPoints) > StraightnessMin;
 		}
 		
@@ -1691,30 +1680,6 @@ function ExtractHandInputs(InputHand,InputName,GetPose,GetPos3)
 			Input.XrSpace = Joints[JointName];
 			Outputs.push(Input);
 		}
-		/*
-		const JointLocalToWorlds = JointNames.map( GetJointLocalToWorld );
-		const JointSpaces = JointNames.map( jn => Joints[jn] );
-		
-		let Input = {};
-		Input.Name =
-		
-		Name,Down,XrSpace
-		
-		const Input = {};
-		Input.Name = NodeName;
-		Input.PoseSpace = JointSpaces[0];	//	primary joint (tip)
-		Input.ExtraData = {};
-		Input.ExtraData.LocalToWorlds = JointLocalToWorlds;
-		Input.ExtraData.InputOriginLocalToWorld = InputOriginLocalToWorld;
-		//	new system never has buttons down...
-		//	could do a float of how straight fingers are
-		//	or if tip is touching another tip...
-		//	could do both as our input system is all about named buttons
-		//	eg. left-index-finger-outstretched=0.9
-		Input.Buttons = [];
-		
-		return Input;
-		 */
 	}
 	FingerNames.forEach(EnumFingerInput);
 	return Outputs;
