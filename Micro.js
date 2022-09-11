@@ -148,7 +148,7 @@ const Macros =
 	DATAWIDTH:128,
 	DATAHEIGHT:128,
 	DATALAST:127*127+1,
-	MAX_PROJECTILES:30,
+	MAX_PROJECTILES:25,
 	MAX_WEAPONS:6,
 	MAX_ACTORS:100,
 	TIMESTEP:0.016666,
@@ -457,7 +457,7 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 			await XrDevice.WaitForEnd;
 		}
 	}
-	XrThread();
+	XrThread().catch(console.error)
 	
 	
 	State=new State_Start()
