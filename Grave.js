@@ -1154,7 +1154,7 @@ class State_End extends State_Click
 	{
 		super(State_Start);
 		this.Time=1;	//	dont have first frame
-		ForcedString = '  GAME      OVER!';
+		ForcedString = '  GAME      OVER';
 	}
 }
 
