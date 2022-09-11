@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout
-      - uses: actions/checkout@v3
+        uses: actions/checkout@v3
       
       - name: Install node/npx
-      - uses: actions/setup-node@v3
+        uses: actions/setup-node@v3
 
       - name: Minify with terser
         run: npx terser --compress --output $MINIFIED_JS -- $INPUT_JS
