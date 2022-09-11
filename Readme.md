@@ -1,13 +1,22 @@
 JS13k 2022 entry
 =============
 - This repository has a workflow that minifies and zips the output (see below)
+- [![Generate Js13k submission zip](https://github.com/NewChromantics/8x8.Js13k/actions/workflows/GenerateJs13kSubmissionZip.yml/badge.svg)](https://github.com/NewChromantics/8x8.Js13k/actions/workflows/GenerateJs13kSubmissionZip.yml)
+- Note: The worflow integer size-check doesn't work!
 
-[![Generate Js13k submission zip](https://github.com/NewChromantics/8x8.Js13k/actions/workflows/GenerateJs13kSubmissionZip.yml/badge.svg)](https://github.com/NewChromantics/8x8.Js13k/actions/workflows/GenerateJs13kSubmissionZip.yml)
+- The goal is to be a vanilla js webxr voxel shooter.
+- [https://grave.quest/](https://grave.quest/)
 
+- Update: Whilst this game loops around, I ran out of time for a LOT of features, bug fixes. I hesitate to call this finished...
+	- There is an ascii Wave editor in `tools.html`, but there's only 2 enemy waves in use!
+	- Enemies dont spawn if you pre-destroyed their gravestones
+	- Gravestones should repair so we can play infinitely
+	- Various bugs with hits & weapons
+	- Needs better sounds
+	- Keyboard input, touch input
+	- IOS could work, with a small-ish change to rescale pos & velocity calculations to write to integer render targets
 
-The goal is to be a vanilla js webxr voxel shooter.
-[https://grave.quest/](https://grave.quest/)
-
+- Commit cde6df269dbb17d02add75f8dcfb41297d97cde5 was submitted
 
 Game Description
 -------------------
