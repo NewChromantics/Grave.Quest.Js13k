@@ -21,7 +21,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 //	sprite local pos centered
 #define SpriteXyzw(si,wh)	vec4(texelFetch(SpritePositions,ivec2(Cubexy.x,si),0).xyz-(wh/2.0),1)
 
-#define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-10))
+#define WaveXyz(wv)	(WavePositions[wv%WAVEPOSITIONCOUNT].xyz*vec3(5,4,0)+vec3(0,4,-10))
 
 //	on death stay still
 //#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
@@ -29,7 +29,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
 //	on death move to heart
 #define Nmexyz		(SpriteMat(Dead?HeartPos0:WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
-#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w)
+#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex%WAVEPOSITIONCOUNT].w)
 
 
 #define NmeIndex		int(Sloti)
@@ -903,12 +903,12 @@ const Macros =
 	DATAWIDTH:128,
 	DATAHEIGHT:128,
 	DATALAST:127*127+1,
-	MAX_PROJECTILES:25,
+	MAX_PROJECTILES:30,
 	MAX_WEAPONS:6,
 	MAX_ACTORS:100,
+	WAVEPOSITIONCOUNT:100,
 	TIMESTEP:0.016666,
 	FLOORY:0.0,
-	NEARFLOORY:0.05,
 	CUBESIZE:0.06,
 	STATIC:0,
 	NULL:1,
@@ -921,7 +921,6 @@ const Macros =
 	SPRITEHEART:SpriteMap['@'],
 	SPRITEZERO:5,
 	STRINGCOUNT:2,
-	WAVEPOSITIONCOUNT:128,
 	HEARTCOOLDOWNFRAMES:4*60,
 	ENTROPY_MIN:0.0,
 	ENTROPY_MAX:1.0,
@@ -946,10 +945,6 @@ function InitArray(sz,init)
 	return Array(sz).fill().map(init);
 }
 
-function Make04(sz=MAX_PROJECTILES)
-{
-	return InitArray(sz,x=>oooo);
-}
 
 let Waves = [
 "__ia_dbdbciddifecffcdgfchfe",
@@ -959,8 +954,8 @@ let Waves = [
 
 let ProjectileIndex = 0;
 //	set w to 1 when new data
-let ProjectilePos = Make04();
-let ProjectileVel = Make04();
+let ProjectilePos = InitArray(MAX_PROJECTILES,x=>oooo);
+let ProjectileVel = InitArray(MAX_PROJECTILES,x=>oooo);
 let WeaponPoses = {}
 let WeaponLastFired = {};	//	[Input] = FiredTime
 let ClearColour=[0.03,0.13,0.03];
@@ -1099,10 +1094,12 @@ class State_Click
 	}
 	async Update()
 	{
-		return this.Time>MIN_GUI_SECS&&this.Started?new this.NextState:this;
+		return this.Started?new this.NextState:this;
 	}
 	UpdateInput(Name,State)
 	{
+		if ( this.Time<MIN_GUI_SECS )
+			return;
 		this.Started|=(this.WasDown[Name] && !State.Down);
 		this.WasDown[Name]=State.Down;
 	}
@@ -1153,9 +1150,9 @@ function OnInput(Input)
 	Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
 }
 
-
-function OnPreRender(CameraToWorld)
+function RenderCameras(Cameras)
 {
+	let CameraToWorld = Cameras[0].LocalToWorld;
 	Update();
 
 	//	first frame needs to bake positions before velocity pass
@@ -1170,22 +1167,10 @@ function OnPreRender(CameraToWorld)
 		Blit(VelocityTextures,rc.VelShader,CameraToWorld,ReadGpuState);
 	}
 	Blit(PositionTextures,rc.PosShader,CameraToWorld);
-}
-
-function OnPostRender()
-{
+	Cameras.forEach(Render)
 	PostFrame();
 	if ( State.Time == 0 )
 		State.Time++;
-}
-
-
-function OnXrRender(Cameras)
-{
-	OnPreRender(Cameras[0].LocalToWorld);
-	Render(Cameras[0]);
-	Render(Cameras[1]);
-	OnPostRender();
 }
 
 
@@ -1216,20 +1201,14 @@ async function Bootup(Canvas,XrOnWaitForCallback)
 	{
 		window.requestAnimationFrame(Tick);
 		let Rect = Canvas.getBoundingClientRect();
-		Canvas.width = Rect.width;
-		Canvas.height = Rect.height;
-
-		OnPreRender();
-		
-		
-		const Camera = Desktop.Camera;
-		Camera.Viewport = [0,0,Canvas.width,Canvas.height];
+		let Camera = Desktop.Camera;
+		let w=Rect.width,h=Rect.height;
+		Camera.Viewport = [0,0,w,h];
 		Camera.Alpha = 1;
 		Camera.FrameBuffer = null;
-	
-		Render(Camera);
-		
-		OnPostRender();
+		Canvas.width = w;
+		Canvas.height = h;
+		RenderCameras([Camera]);
 	}
 
 	Tick();
@@ -1458,11 +1437,20 @@ function Blit(Textures,Shader,CameraToWorld,PostFunc)
 let ReadBuffer;
 let ReadPxBuffer;
 
-async function Yield(ms)
+
+function CreatePromise()
 {
-	let r,p=new Promise(rs=>r=rs);
-	setTimeout(r,ms);
-	await p;
+	let r,x,p=new Promise((rs,rj)=>{r=rs;x=rj});
+	p.Resolve=r;
+	p.Reject=x;
+	return p;
+}
+
+function Yield(ms)
+{
+	let p = CreatePromise();
+	setTimeout(p.Resolve,ms);
+	return p;
 }
 
 
@@ -1542,14 +1530,6 @@ async function GetSupportedSessionMode()
 	return false;
 }
 
-function CreatePromise()
-{
-	let r,x,p=new Promise((rs,rj)=>{r=rs;x=rj});
-	p.Resolve=r;
-	p.Reject=x;
-	return p;
-}
-
 function GetXrAlpha(BlendMode)
 {
 	//	if undefined or invalid, assume opaque
@@ -1605,7 +1585,7 @@ class XrDev
 		this.FrameUpdate_Input(Frame,Pose);
 		
 		let Cameras = Pose.views.map(View=>this.GetViewCamera(Frame,Pose,View,this.Layer.framebuffer));
-		OnXrRender(Cameras);
+		RenderCameras(Cameras);
 	}
 	
 	GetViewCamera(Frame,Pose,View,FrameBuffer)
