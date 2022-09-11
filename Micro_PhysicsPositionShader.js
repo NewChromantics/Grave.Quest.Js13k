@@ -87,7 +87,7 @@ uniform mat4 String[STRINGCOUNT];
 #define CharNull		(Charw==0)
 
 #define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.6,-1.5)) * sxyz ).xyz
-#define HeartPos0		HeartPos(vec4(0,0,0,1))
+#define HeartPos0		HeartPos(vec4(ooo1))
 #define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
 
 uniform vec3 Heart;

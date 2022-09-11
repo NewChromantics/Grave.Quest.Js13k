@@ -17,7 +17,7 @@ vec3 GetLocalPosition(int v)
 }
 
 #define FloorCubeSize (FLOORSIZE/CUBESIZE)
-#define FloorTransform	mat4(FloorCubeSize,0,0,0,0,1,0,0,0,0,FloorCubeSize,0,0,float(FLOORY)-CUBESIZE,0,1)
+#define FloorTransform	mat4(FloorCubeSize,0,ooo1,oooo,FloorCubeSize,0,0,float(FLOORY)-CUBESIZE,0,1)
 
 mat4 GetLocalToWorldTransform(vec3 LocalPosition)
 {
@@ -30,10 +30,7 @@ mat4 GetLocalToWorldTransform(vec3 LocalPosition)
 	Rand1 = Position4.w;
 	vec3 WorldPosition = Position4.xyz;
 
-	mat4 Transform = mat4( 1,0,0,0,
-							0,1,0,0,
-							0,0,1,0,
-							WorldPosition,1 );
+	mat4 Transform = mat4( 1,0,ooo1,0,ooo1,0,WorldPosition,1 );
 	return Transform;
 }
 
@@ -59,7 +56,7 @@ vec3 GetWorldPosition(mat4 LocalToWorldTransform,vec3 LocalPosition)
 	if ( !ENABLE_STRETCH || length(TailDelta)<CUBESIZE)
 		return WorldPos.xyz;
 
-	vec4 OriginWorldPos = LocalToWorldTransform * vec4(0,0,0,1);
+	vec4 OriginWorldPos = LocalToWorldTransform * vec4(ooo1);
 	OriginWorldPos.xyz *= OriginWorldPos.www;
 	OriginWorldPos.w = 1.0;
 	
@@ -104,7 +101,7 @@ in vec2 FragCubexy;
 in vec3 FragWorldPosition;
 in vec4 Velocity;
 in float Rand1;
-vec4 Light = vec4(0,0,0,LIGHTRAD);
+vec4 Light = vec4(ooo,LIGHTRAD);
 
 #define DEBUG_COLOURS		true
 #define FLOOR_TILE_SIZE		0.4

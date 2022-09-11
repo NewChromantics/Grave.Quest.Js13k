@@ -26,6 +26,8 @@ function ResetGame()
 let rc;
 let gl;
 let FloatTarget;
+let xr = navigator.xr;
+let XrSession;
 
 const OLD=0;
 const NEW=1;
@@ -135,6 +137,9 @@ function GetWavexy(Seq,Time)
 
 const Macros =
 {
+	ooo:[0,0,0],
+	oooo:[0,0,0,0],
+	ooo1:[0,0,0,1],
 	FLOORSIZE:200.001,
 	LIGHTRAD:30.01,
 	WORLDSIZE:13.01,
@@ -181,7 +186,7 @@ function PadArray(a,Length,Fill)
 
 function PadPixels(a,i,_,w=DATAWIDTH)
 {
-	a=a||[[0,0,0,0]];
+	a=a||[oooo];
 	while(a.length<w)	a.push(...a);
 	return a.slice(0,w);
 }
@@ -193,7 +198,7 @@ function InitArray(sz,init)
 
 function Make04(sz=MAX_PROJECTILES)
 {
-	return InitArray(sz,x=>[0,0,0,0]);
+	return InitArray(sz,x=>oooo);
 }
 
 let Waves = [
@@ -207,8 +212,8 @@ let ProjectileIndex = 0;
 let ProjectilePos = Make04();
 let ProjectileVel = Make04();
 let WeaponPoses = {}
-let ClearColour=[0.05, 0.15, 0.05, 1.0];
-
+let WeaponLastFired = {};	//	[Input] = FiredTime
+let ClearColour=[0.03,0.13,0.03];
 let Desktop;
 let FireRepeatMs = 40;
 
@@ -452,7 +457,7 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 	{
 		while(XrOnWaitForCallback)
 		{
-			let XrDevice = await CreateXr(gl,OnRender,OnInput,XrOnWaitForCallback);
+			let XrDevice = await CreateXr(OnRender,OnInput,XrOnWaitForCallback);
 			await XrDevice.WaitForEnd;
 		}
 	}
@@ -493,7 +498,6 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 
 
 
-let WeaponLastFired = {};	//	[Input] = FiredTime
 
 function FireWeapon(Name,Transform)
 {
@@ -632,7 +636,7 @@ function UpdateUniforms()
 		Str =`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`;
 	SetUniformStr('String',ForcedString||Str);
 	
-	SetUniformVector('Random4',[0,0,0,0].map(plerp));
+	SetUniformVector('Random4',oooo.map(plerp));
 	SetUniformVector('Heart',[Lives,HeartHitCooldown,State.Time]);
 
 	SetUniformVector('ProjectilePos',ProjectilePos.flat(4));
@@ -707,7 +711,7 @@ function Blit(Textures,Shader,CameraToWorld,PostFunc)
 
 
 let ReadBuffer;
-
+let ReadPxBuffer;
 
 async function Yield(ms)
 {
@@ -716,32 +720,6 @@ async function Yield(ms)
 	await p;
 }
 
-async function WaitForSync(Sync,Context)
-{
-	const gl = Context;
-	
-	const RecheckMs = 1000/10;
-	async function CheckSync()
-	{
-		const Flags = 0;
-		const WaitNanoSecs = 0;
-		while(true)
-		{
-			const Status = gl.clientWaitSync( Sync, Flags, WaitNanoSecs );
-			if ( Status == gl.WAIT_FAILED )
-				throw `clientWaitSync failed`;
-			if ( Status == gl.TIMEOUT_EXPIRED )
-			{
-				await Yield( RecheckMs );
-				continue;
-			}
-			//	ALREADY_SIGNALED
-			//	CONDITION_SATISFIED
-			break;
-		}
-	}
-	return CheckSync();
-}
 
 async function ReadGpuState(Textures)
 {
@@ -765,44 +743,13 @@ async function ReadGpuState(Textures)
 async function ReadTexture(Target)
 {
 	ReadBuffer = ReadBuffer || gl.createBuffer();
-	
-	const PixelBuffer = new (Target.Type==gl.FLOAT?Float32Array:Uint8Array)(DATAWIDTH*DATAHEIGHT*4);
-	
-	gl.readPixels( 0, 0, DATAWIDTH, DATAHEIGHT, gl.RGBA, Target.Type, PixelBuffer );
-	return PixelBuffer;
-	/*
-	
-	gl.bindBuffer(gl.PIXEL_PACK_BUFFER, ReadBuffer );
-	gl.bufferData(gl.PIXEL_PACK_BUFFER, PixelBuffer.byteLength, gl.STREAM_READ );
-	const Offset = 0;
-	gl.readPixels( 0, 0, DATAWIDTH, DATAHEIGHT, gl.RGBA, gl.FLOAT, Offset );
-	gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null );
-	
-	//	create a sync point so we know when readpixels commands above have completed
-	const Sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-	
-	async function DoRead()
-	{
-		await WaitForSync(Sync,gl);
-		gl.deleteSync(Sync);
-		gl.bindBuffer(gl.PIXEL_PACK_BUFFER, ReadBuffer);
-		const SourceOffset = 0;
-		const DestinationOffset = 0;
-		const DestinationSize = DATAWIDTH*DATAHEIGHT*4;//PixelBuffer.byteLength;
-		gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, SourceOffset, PixelBuffer, DestinationOffset, DestinationSize );
-		gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-		return PixelBuffer;
-	}
-	
-	return DoRead();
-	//Image.ReadPixelsBufferPromise.finally(Cleanup);
-	//gl.deleteBuffer(ReadPixelsBuffer);
-	 */
+	ReadPxBuffer = ReadPxBuffer || new (Target.Type==gl.FLOAT?Float32Array:Uint8Array)(DATAWIDTH*DATAHEIGHT*4);
+	gl.readPixels( 0, 0, DATAWIDTH, DATAHEIGHT, gl.RGBA, Target.Type, ReadPxBuffer );
+	return ReadPxBuffer;
 }
 
 
 
-let xr = navigator.xr;
 
 async function GetSupportedSessionMode()
 {
@@ -832,15 +779,8 @@ async function GetSupportedSessionMode()
 	}
 	
 	//	gr: we may want to enumerate all the modes
-	const SessionTypes =
-	[
-	'immersive-ar',
-	'immersive-vr',
-	'inline'
-	];
-	
 	const Errors = [];
-	for ( let SessionType of SessionTypes )
+	for ( let SessionType of `immersive-ar,immersive-vr,inline`.split`,` )
 	{
 		try
 		{
@@ -854,7 +794,6 @@ async function GetSupportedSessionMode()
 			console.warn(e);
 		}
 	}
-
 	return false;
 }
 
@@ -883,21 +822,18 @@ function GetXrAlpha(BlendMode)
 
 class XrDev
 {
-	constructor(Session,ReferenceSpace,gl,OnRender,OnInput)
+	constructor(ReferenceSpace,OnRender,OnInput)
 	{
-		this.gl = gl;
-		this.Session = Session;
 		this.ReferenceSpace = ReferenceSpace;
 		this.OnRender = OnRender;
 		this.OnInput = OnInput;
 		this.WaitForEnd = CreatePromise();
 		this.Inputs={};
-		Session.addEventListener('end',this.WaitForEnd.Resolve);
+		XrSession.addEventListener('end',this.WaitForEnd.Resolve);
 	}
 	
 	async InitLayer()
 	{
-		let gl=this.gl;
 		this.EnableStencilBuffer = false;
 
 		
@@ -906,8 +842,8 @@ class XrDev
 		//	mentioned here: https://developer.oculus.com/documentation/web/webxr-perf-workflow/
 		Options.framebufferScaleFactor = 1.0;
 		Options.antialias = true;
-		this.Layer = new XRWebGLLayer( this.Session, gl, Options );
-		this.Session.updateRenderState({ baseLayer: this.Layer });
+		this.Layer = new XRWebGLLayer( XrSession, gl, Options );
+		XrSession.updateRenderState({ baseLayer: this.Layer });
 	
 		//	https://developer.oculus.com/documentation/web/webxr-ffr/#to-set-and-adjust-ffr-dynamically
 		//	set dynamic FFR...
@@ -920,17 +856,11 @@ class XrDev
 	
 	OnFrame(TimeMs,Frame)
 	{
-		this.Session.requestAnimationFrame( this.OnFrame.bind(this) );
-		let gl=this.gl;
+		XrSession.requestAnimationFrame( this.OnFrame.bind(this) );
 		//	do browser anim step
 		const Pose = Frame ? Frame.getViewerPose(this.ReferenceSpace) : null;
-		
-		//	don't know what to render?
 		if ( !Pose )
-		{
-			console.log(`XR no pose`,Pose);
 			return;
-		}
 		this.FrameUpdate_Input(Frame,Pose);
 		this.OnRender(false,new DOMMatrix(Pose.transform.matrix));	//	prerender
 		//	render
@@ -1019,7 +949,7 @@ class XrDev
 	}
 }
 
-export async function CreateXr(gl,OnRender,OnInput,OnWaitForCallback)
+export async function CreateXr(OnRender,OnInput,OnWaitForCallback)
 {
 	const SessionMode = await GetSupportedSessionMode();
 	if ( SessionMode == false )
@@ -1033,13 +963,9 @@ export async function CreateXr(gl,OnRender,OnInput,OnWaitForCallback)
 		//	and return that promise
 		try
 		{
-			const Options = {};
-			Options.optionalFeatures = [];
-			Options.optionalFeatures.push('local');
-			Options.optionalFeatures.push('local-floor');
-			Options.optionalFeatures.push('bounded-floor');
-			Options.optionalFeatures.push('hand-tracking');	//	for quest
-			Options.optionalFeatures.push('high-fixed-foveation-level');
+			let Options={
+			optionalFeatures:`local,local-floor,bounded-floor,hand-tracking,high-fixed-foveation-level`.split`,`
+			}
 			const RequestSessionPromise = xr.requestSession(SessionMode,Options);
 			RequestSessionPromise.then( Session => SessionPromise.Resolve(Session) ).catch( e => SessionPromise.Reject(e) );
 		}
@@ -1050,36 +976,24 @@ export async function CreateXr(gl,OnRender,OnInput,OnWaitForCallback)
 	}
 	OnWaitForCallback(Callback);
 	
-	const Session = await SessionPromise;
-	const ReferenceSpaceTypes =
-	[
-		'bounded-floor',	//	expecting player to not move out of this space. bounds geometry returned, y=0=floor
-		'local-floor',		//	y=0=floor
-		'local',			//	origin = view starting pos
-		'unbounded',		//	gr: where is origin?
-		'viewer',
-	];
+	XrSession = await SessionPromise;
+	let RSTypes=`bounded-floor,local-floor,local,unbounded,viewer`.split`,`;
 	async function GetReferenceSpace()
 	{
-		for ( let ReferenceSpaceType of ReferenceSpaceTypes )
+		for ( let RSType of RSTypes )
 		{
 			try
 			{
-				const ReferenceSpace = await Session.requestReferenceSpace(ReferenceSpaceType);
-				ReferenceSpace.Type = ReferenceSpaceType;
-				return ReferenceSpace;
+				return await XrSession.requestReferenceSpace(RSType);
 			}
-			catch(e)
-			{
-				console.warn(`XR ReferenceSpace type ${ReferenceSpaceType} not supported. ${e}`);
-			}
+			catch{}
 		}
 		throw `Failed to find supported XR reference space`;
 	}
-	const ReferenceSpace = await GetReferenceSpace();
+	let ReferenceSpace = await GetReferenceSpace();
 	console.log(`Got XR ReferenceSpace`,ReferenceSpace);
 	
-	const Device = new XrDev( Session, ReferenceSpace, gl, OnRender, OnInput );
+	let Device = new XrDev( ReferenceSpace, OnRender, OnInput );
 	await Device.InitLayer();
 	return Device;
 }
