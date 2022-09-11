@@ -146,13 +146,13 @@ const Grave =`Grave
 ___bbbbb___
 __bbbbbbb__
 _bbbbbbbbb_
-bbb_bbb_bbb
-bbbb_b_bbbb
-bbbbb_bbbbb
-bbbb_b_bbbb
-bbb_bbb_bbb
+bb___bb__bb
 bbbbbbbbbbb
+b___bb____b
 bbbbbbbbbbb
+b_b__bb__bb
+bbbbbbbbbbb
+b____b____b
 bbbbbbbbbbb
 `;
 
@@ -302,12 +302,13 @@ _bbbbb_
 `;
 
 
+
 const CharS =`S
-__bbbb
-_bb___
-__bbb_
-____bb
-_bbbb_
+_bbbb
+bb___
+_bbb_
+___bb
+bbbb_
 `;
 
 const CharT =`T
@@ -424,6 +425,52 @@ _bbb_
 `;
 
 
+const CharQ =`Q
+_bbb_
+bb__b
+bb__b
+bb__b
+_bbb_
+___bb_
+`;
+
+
+const CharGhostTopLeft =`&
+_____bbb
+____bbbb
+___bb__b
+___bb__b
+___bb__b
+`;
+const CharGhostTopRight =`$
+bb______
+bbb_____
+b__b____
+b__b____
+b__b____
+`;
+
+const CharGhostBottomLeft =`*
+___bbbbb
+____bbbb
+____bbbb
+_____b_b
+_____b_b
+________
+________
+________
+`;
+
+const CharGhostBottomRight =`>
+bbbb____
+bbbb____
+bbbb____
+_b_b____
+_b_b____
+________
+________
+________
+`;
 
 //	RLE data. but decoded into 4 component(RGBA) data for textures (then .flat(2))
 //	https://levelup.gitconnected.com/having-fun-with-run-length-encoded-sprites-662d6a8147c8
@@ -609,7 +656,8 @@ EncodeSpritesToCode(
 					Ghost,Cross,Grave,Grass,Fence,
 					Num0,Num1,Num2,Num3,Num4,Num5,Num6,Num7,Num8,Num9,
 					Space,Exclamation,Heart,Dot,DeadEnemy,
-					CharS,CharT,CharA,CharR,CharP,CharE,CharN,CharY,CharK,CharG,CharM,CharO,CharV,CharB,CharU
+					CharGhostTopLeft,CharGhostTopRight,CharGhostBottomLeft,CharGhostBottomRight,
+					CharS,CharT,CharA,CharR,CharP,CharE,CharN,CharY,CharK,CharG,CharM,CharO,CharV,CharB,CharU,CharQ,
 					);
 EncodeWavesToCode(Wave0,Wave1);
 

@@ -80,7 +80,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 uniform mat4 String[STRINGCOUNT];
 #define CharLineW		10
 #define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,1,-8)
-#define CharKern		vec3(0.45,-0.4,1)
+#define CharKern		vec3(0.48,-0.45,1)
 #define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
 
 #define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n)) * texelFetch( SpritePositions, ivec2(CharP,s), 0 )).xyz
@@ -770,7 +770,7 @@ class DesktopXr
 	}
 }
 
-let MIN_GUI_SECS=3;
+let MIN_GUI_MS=2000;
 let NmePixelCount = 0;
 let NmeLiveCount = 0;
 let NmeCount = 0;
@@ -804,11 +804,10 @@ let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
 
-
 const Sprites = [
 	"a13b1a1b1a1b1a1b1a1b1a2b1a1b1a1b1a1b1a1b1a1b10a1b10a1b4a1b1a1b16a3b2a3b3a3b2a3b3a2b3a2b2a1b9a3b7a2", //	Ghost
 	"a15b3a8b3a8b3a8b3a8b3a8b3a4b22a4b3a8b3a4", //	Cross
-	"a11b36a1b3a1b7a1b1a1b9a1b9a1b1a1b7a1b3a1b3a1b9a3b7a5b5a3", //	Grave
+	"a11b12a4b1a4b13a1b1a2b2a2b14a3b2a4b14a3b2a2b2a1b9a3b7a5b5a3", //	Grave
 	"a16b1a9b3a5b2a1b1a1b2a6b1a1b2a1b2a3b1a2b1a1b1a5b1a2b1a2b2a6b1a16", //	Grass
 	"a12b1a3b1a3b1a1b11a1b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b1a3b1a3b1a2b9a2b1a3b1a3b1a1b3a1b3a1b3a1b1a3b1a3b1a12", //	Fence
 	"a12b4a6b2a2b2a5b2a2b2a5b2a2b2a6b4a6", //	Num0
@@ -826,7 +825,11 @@ const Sprites = [
 	"a14b1a9b3a7b5a5b7a5b2a1b2a5", //	@
 	"a13b2a9b2a40", //	.
 	"a12b5a16b1a1b1a1b1a1b1a5b1a3b1a5b1a1b1a1b1a1b1a4", //	~
-	"a12b4a10b2a7b3a7b2a10b4a5", //	S
+	"a14b2a2b1a6b2a2b1a6b2a2b1a7b4a8b3a3", //	&
+	"a11b1a2b1a7b1a2b1a7b1a2b1a7b3a8b2a9", //	$
+	"a49b1a1b1a8b1a1b1a7b4a7b4a6b5a3", //	*
+	"a45b1a1b1a8b1a1b1a7b4a7b4a7b4a7", //	>
+	"a11b4a10b2a7b3a7b2a10b4a6", //	S
 	"a13b2a9b2a9b2a9b2a7b6a5", //	T
 	"a11b2a2b1a6b5a6b2a2b1a6b2a2b1a7b3a7", //	A
 	"a11b2a2b1a6b4a7b2a2b1a6b2a2b1a6b4a7", //	R
@@ -841,8 +844,10 @@ const Sprites = [
 	"a13b2a8b2a1b1a7b2a1b1a6b2a2b1a6b2a2b1a6", //	V
 	"a11b4a7b2a2b1a6b4a7b2a2b1a7b3a7", //	B
 	"a12b3a7b2a2b1a6b2a2b1a6b2a2b1a6b2a2b1a6", //	U
+	"a14b2a7b3a7b2a2b1a6b2a2b1a6b2a2b1a7b3a7", //	Q
 ];
-const SpriteMap={	" ":15,	"!":16,	"@":17,	".":18,	"~":19,	"S":20,	"T":21,	"A":22,	"R":23,	"P":24,	"E":25,	"N":26,	"Y":27,	"K":28,	"G":29,	"M":30,	"O":31,	"V":32,	"B":33,	"U":34};
+const SpriteMap={	" ":15,	"!":16,	"@":17,	".":18,	"~":19,	"&":20,	"$":21,	"*":22,	">":23,	"S":24,	"T":25,	"A":26,	"R":27,	"P":28,	"E":29,	"N":30,	"Y":31,	"K":32,	"G":33,	"M":34,	"O":35,	"V":36,	"B":37,	"U":38,	"Q":39};
+
 function CharToSprite(c)
 {
 	return SpriteMap[c]||(parseInt(c,36)+SPRITEZERO);
@@ -1090,7 +1095,7 @@ class State_Click
 	}
 	UpdateInput(Name,State)
 	{
-		if ( this.Time<MIN_GUI_SECS )
+		if ( this.Time<MIN_GUI_MS )
 			return;
 		this.Started|=(this.WasDown[Name] && !State.Down);
 		this.WasDown[Name]=State.Down;
@@ -1104,8 +1109,14 @@ class State_Start extends State_Click
 		zzfx(...[,,446,,.07,,,.1,-8.5,-1,,,,,,,,.49,.09]); // Jump 262
 		super(State_Game);
 		this.Time=0;
-		ForcedString = 'PRESS ANY  BUTTON!';
+		ForcedString = `&$GRAVE   *>.QUEST!`;
 		ResetGame();
+	}
+	
+	async Update()
+	{
+		if ( this.Time > MIN_GUI_MS )			ForcedString = 'PRESS ANY  BUTTON!';
+		return super.Update();
 	}
 }
 class State_Game
@@ -1116,9 +1127,15 @@ class State_Game
 		this.Time=0;
 		ForcedString = null;
 		ResetGame();
+		this.LastSec = 0;
 	}
 	async Update()
 	{
+		//	ticking
+		if ( Math.floor(GetTime()/1000)>Math.floor(this.LastTime/1000) )
+			zzfx(...[.9,.8,100,.01,.01,.12,,1.46,,-0.5,-250,,,,,,,.59,.02]); // Pickup 278
+		this.LastTime = GetTime();
+		
 		let OldNmeCount = NmeLiveCount;
 		NmeLiveCount = Math.floor(this.Time/2000);;
 		if ( OldNmeCount != NmeLiveCount )
@@ -1482,6 +1499,7 @@ async function ReadGpuState(Textures)
 	let Killed = (NmeLiveCount-NmeCount);
 	if ( !PlayedHeartSound && Killed > OldKilled )
 	{
+		if ( HeartHitCooldown<=0 )
 		if ( State.InGame )
 			zzfx(...[2.7,,780,.02,.07,.15,1,2.1,-3.4,,-50,.17,,-0.1,,,.06,.83,.15]);
 			//zzfx(...[2.7,,851,.02,.06,.15,1,1.55,-1.8,,41,.06,,,,,.06,.83,.04]);
