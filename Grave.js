@@ -55,7 +55,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 #define Slot_IsFloor		(FragIndex==DATALAST)
 #define Projectilei			int(Cubexy.x)
 #define FetchProjectile(t,p)	texelFetch(t,ivec2(p,ProjectileRow),0)
-#define Slot_IsWeapon		(Sloti==WeaponRow )//&& Weaponi < MAX_WEAPONS)
+#define Slot_IsWeapon		(Sloti==WeaponRow && Weaponi < MAX_WEAPONS)
 #define Weaponi				int(Cubexy.x)
 
 //	type changes, so is velocity w
@@ -909,7 +909,7 @@ const Macros =
 	DATAHEIGHT:128,
 	DATALAST:127*127+1,
 	MAX_PROJECTILES:30,
-	MAX_WEAPONS:6,
+	MAX_WEAPONS:10,
 	MAX_ACTORS:100,
 	WAVEPOSITIONCOUNT:100,
 	TIMESTEP:0.016666,
