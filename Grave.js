@@ -1166,7 +1166,7 @@ async function Bootup(Canvas,XrOnWaitForCallback)
 			await XrDevice.WaitForEnd;
 		}
 	}
-	XrThread().catch(console.error)
+	XrThread().catch(console.warn)
 	
 	
 	State=new State_Start()
