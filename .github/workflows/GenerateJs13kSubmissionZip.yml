@@ -36,7 +36,7 @@ jobs:
 
       - name: Get final zip size
         run: |
-          FILE_SIZE=`stat -f "%z" ./$OUTPUT_ZIP`
+          FILE_SIZE=`stat --format="%z" ./$OUTPUT_ZIP`
           echo "Final zip size $FILE_SIZE"
           echo "ZIP_SIZE=$FILE_SIZE" >> $GITHUB_ENV
           
