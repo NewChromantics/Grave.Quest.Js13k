@@ -1606,7 +1606,7 @@ class XrDev
 			return;
 		this.FrameUpdate_Input(Frame,Pose);
 		
-		Pose.views.map(View=>this.GetViewCamera(Frame,Pose,View,this.Layer.framebuffer));
+		let Cameras = Pose.views.map(View=>this.GetViewCamera(Frame,Pose,View,this.Layer.framebuffer));
 		OnXrRender(Cameras);
 	}
 	
