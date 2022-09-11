@@ -1,8 +1,776 @@
-import * as CubeShader from './CubeShader.js'
-import * as PosShader from './PosShader.js'
-import * as VelShader from './VelShader.js'
+const CubeShader={};
+const PosShader={};
+const VelShader={};
+const NmeMeta =
+`
+#define Range(mn,mx,v)		((v-mn)/(mx-mn))
+#define Range01(mn,mx,v)	clamp(Range(mn,mx,v),0.0,1.1)
+#define Lerp(mn,mx,v)	( mn + ((mx-mn)*v) )
+#define ENTROPY_MIN4	vec4(ENTROPY_MIN,ENTROPY_MIN,ENTROPY_MIN,0)
+#define ENTROPY_MAX4	vec4(ENTROPY_MAX,ENTROPY_MAX,ENTROPY_MAX,1)
+#define dataFetch(t)	Lerp( ENTROPY_MIN4, ENTROPY_MAX4, texelFetch(t,ivec2(Cubexy),0) )
+#define dataWrite(v)	Range( ENTROPY_MIN4.xyz,ENTROPY_MAX4.xyz,v)
 
-import DesktopXr from './DesktopXr.js'
+#define SpriteMat(t)		mat4(CUBESIZE,oooo,CUBESIZE,oooo,CUBESIZE,0,t,1)
+
+uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
+
+#define SPRITEDIM	vec3(SPRITEW,0,0)
+#define CHARDIM		vec3(CHARW,CHARH,0)
+
+//	sprite local pos centered
+#define SpriteXyzw(si,wh)	vec4(texelFetch(SpritePositions,ivec2(Cubexy.x,si),0).xyz-(wh/2.0),1)
+
+#define WaveXyz(wv)	(WavePositions[wv].xyz*vec3(5,4,0)+vec3(0,4,-10))
+
+//	on death stay still
+//#define Nmexyz		(SpriteMat(WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
+//#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w*sign(Livesf))
+
+//	on death move to heart
+#define Nmexyz		(SpriteMat(Dead?HeartPos0:WaveXyz(NmeIndex))*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz
+#define NmePos		mix(Nmexyz,HeartPos0,WavePositions[NmeIndex].w)
+
+
+#define NmeIndex		int(Sloti)
+#define NmeIndexf		float(NmeIndex)
+
+//	voxel slots are frag y (should pack these into index, but we use .x for sprite index)
+//	only to be used in blits
+#ifndef Cubexy
+#define Cubexy			gl_FragCoord
+#endif
+#define					FragIndex	(int(Cubexy.x) + (int(Cubexy.y)*DATAWIDTH))
+
+#define						ActorCount	MAX_ACTORS
+#define ProjectileRow		(ActorCount+0)				//100
+#define HeartRow			(ActorCount+1)				//101
+#define CharRow				(Sloti-(ActorCount+2))		//102 103
+#define WeaponRow			(ActorCount+5)			//	104
+#define Sloti				int(Cubexy.y)
+#define Slot_IsActor		(Sloti<ActorCount)
+#define Slot_IsProjectile	(Sloti==ProjectileRow)
+#define Slot_IsHeart		(Sloti==HeartRow)
+#define Slot_IsChar			(CharRow>=0&&CharRow<=1)
+#define Slot_IsFloor		(FragIndex==DATALAST)
+#define Projectilei			int(Cubexy.x)
+#define FetchProjectile(t,p)	texelFetch(t,ivec2(p,ProjectileRow),0)
+#define Slot_IsWeapon		(Sloti==WeaponRow )//&& Weaponi < MAX_WEAPONS)
+#define Weaponi				int(Cubexy.x)
+
+//	type changes, so is velocity w
+#define Type			Vel4.w
+#define Typei			int(Type)
+#define Type_IsStatic	(Typei<=STATIC)
+#define Type_IsNull		(Typei==NULL)
+#define Type_IsDebris	(Typei==DEBRIS||Typei==DEBRISHEART||Typei==DEBRISBLOOD)
+#define Type_IsDebrisHeart	(Typei==DEBRISHEART)
+#define Type_IsDebrisBlood	(Typei==DEBRISBLOOD)
+#define Type_IsSprite	(Typei>=SPRITE0)
+#define Type_IsAsleep	(Typei<0)
+//#define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
+#define SpriteIndex		(Typei>0?0 : abs(Typei)-SPRITE0 )
+
+#define PPerChar		20
+#define CharBuffer		(STRINGCOUNT*16)
+#define Chari			(int(Cubexy.x)+(CharRow*DATAWIDTH))
+//#define CharI			(FragIndex-(DATALAST-PPerChar*CharBuffer))
+#define CharP			(Chari%PPerChar)
+#define CharN			int(Chari/PPerChar)
+
+uniform mat4 String[STRINGCOUNT];
+#define CharLineW		10
+#define CharOrigin		vec3(-float(CharLineW)*0.5*0.4,1,-8)
+#define CharKern		vec3(0.45,-0.4,1)
+#define CharPos(n)		CharOrigin+vec3(n%CharLineW,int(n/CharLineW),0)*CharKern
+
+#define Charxyz(n,s)	(CameraToWorld * SpriteMat(CharPos(n)) * texelFetch( SpritePositions, ivec2(CharP,s), 0 )).xyz
+#define CharS			int(String[CharN/16][CharN%16/4][CharN%4])
+#define CharXyz			(Charxyz(CharN,CharS))
+#define Charw			int(texelFetch( SpritePositions, ivec2(CharP,CharS), 0 ).w)
+#define CharNull		(Charw==0)
+
+#define HeartPos(sxyz)	(CameraToWorld * SpriteMat(vec3(0,-0.6,-1.5)) * sxyz ).xyz
+#define HeartPos0		HeartPos(vec4(ooo1))
+#define HeartXyz		HeartPos(SpriteXyzw(SPRITEHEART,CHARDIM))
+
+uniform vec3 Heart;
+#define HeartCooldown	int(Heart.y)
+#define Livesf			max(0.0,Heart.x)
+#define Dead			(Livesf<1.0)
+#define FirstFrame		(Heart.z<=0.0)
+
+uniform mat4 CameraToWorld;
+
+uniform vec4 ProjectileVel[MAX_PROJECTILES];
+uniform vec4 ProjectilePos[MAX_PROJECTILES];
+uniform mat4 WeaponPoses[MAX_WEAPONS];
+uniform vec4	Random4;
+uniform sampler2D OldVelocitys;
+uniform sampler2D NewVelocitys;
+uniform sampler2D OldPositions;
+uniform sampler2D NewPositions;
+uniform sampler2D SpritePositions;
+
+#define RAND1			(Pos4.w)
+#define UP				vec3(0,1,0)
+`;
+
+PosShader.Vert =
+`
+out vec2 uv;
+void main()
+{
+#define c(n,u,v)	case n:uv=vec2(u,v);break;
+	switch(gl_VertexID)
+	{
+c(0,0,0)
+c(1,1,0)
+c(2,1,1)
+c(3,0,1)
+	}
+	gl_Position=vec4(uv*2.0-1.0,0,1);
+}
+`;
+
+PosShader.Frag =
+`out vec4 xyzw;
+in vec2 uv;
+
+${NmeMeta}
+
+#define xyz	xyzw.xyz
+void main()
+{
+	vec4 Vel4 = dataFetch(OldVelocitys);
+	xyzw = dataFetch(OldPositions);
+	
+	if ( FirstFrame )
+	{
+		xyz = (SpriteMat(xyz)*SpriteXyzw(SpriteIndex,SPRITEDIM)).xyz;
+		if ( !Type_IsStatic )
+			xyz = NmePos;	//	if is actor
+		if ( Slot_IsHeart )
+			xyz = HeartXyz;
+		if ( Slot_IsChar )
+			xyz = CharXyz;
+	}
+	else
+	{
+		xyz += Vel4.xyz * TIMESTEP;
+	}
+
+	//	new projectile data
+	if ( Slot_IsProjectile && ProjectilePos[Projectilei].w > 0.0 )
+		xyz = ProjectilePos[Projectilei].xyz;
+
+	//	stick to floor
+	xyz.y = max( xyz.y, float(FLOORY) );
+	xyz = dataWrite(xyz);
+}
+`;
+
+
+CubeShader.Vert =
+`out vec2 FragCubexy;
+out vec3 FragWorldPosition;
+out vec4 Velocity;
+out float Rand1;
+uniform mat4 WorldToCameraTransform;
+uniform mat4 CameraProjectionTransform;
+
+#define Cubexy	FragCubexy
+${NmeMeta}
+
+vec3 GetLocalPosition(int v)
+{
+	int x = ivec4(915775499,923195439,642272978,49129)[v/30]>>v%30;
+	return sign(vec3(x&1,x&2,x&4));
+}
+
+#define FloorCubeSize (FLOORSIZE/CUBESIZE)
+#define FloorTransform	mat4(FloorCubeSize,0,ooo1,oooo,FloorCubeSize,0,0,float(FLOORY)-CUBESIZE,0,1)
+
+mat4 GetLocalToWorldTransform()
+{
+	if ( Slot_IsFloor )	return FloorTransform;
+	if ( Slot_IsWeapon )	return WeaponPoses[Weaponi];
+
+
+	vec4 OldPosition4 = dataFetch(OldPositions);
+	vec4 Position4 = dataFetch(NewPositions);
+	Rand1 = Position4.w;
+	vec3 WorldPosition = Position4.xyz;
+
+	mat4 Transform = mat4( 1,0,ooo1,0,ooo1,0,WorldPosition,1 );
+	return Transform;
+}
+
+float VelocityStretch = 3.0;
+#define ENABLE_STRETCH	(FLOAT_TARGET && !Slot_IsFloor)
+//#define ENABLE_STRETCH	false
+
+
+vec3 GetWorldPosition(mat4 LocalToWorldTransform,vec3 LocalPosition)
+{
+	LocalPosition *= CUBESIZE;
+
+	Velocity = dataFetch(NewVelocitys);
+
+	vec3 WorldPos = (LocalToWorldTransform * vec4(LocalPosition,1.0)).xyz;
+
+	//	stretch world pos along velocity
+	vec3 TailDelta = -Velocity.xyz * VelocityStretch * TIMESTEP;
+	if ( !ENABLE_STRETCH || length(TailDelta)<CUBESIZE)
+		return WorldPos;
+
+	vec3 OriginWorldPos = (LocalToWorldTransform * vec4(ooo1)).xyz;
+	vec3 LocalPosInWorld = WorldPos - OriginWorldPos;
+	
+	vec3 NextPos = WorldPos - (TailDelta*0.9);
+	vec3 PrevPos = WorldPos + (TailDelta*0.1);
+	float Scale = dot( normalize(LocalPosInWorld), normalize(-TailDelta) );
+	Scale=Scale>0.0?1.0:0.0;
+	WorldPos = mix(PrevPos,NextPos,Scale);
+	return WorldPos;
+}
+
+
+void main()
+{
+	int CubeIndex = gl_VertexID / (3*2*6);
+	FragCubexy = vec2( CubeIndex%DATAWIDTH, (CubeIndex/DATAWIDTH) );
+	int VertexOfCube = gl_VertexID % (3*2*6);
+	vec3 LocalPosition = GetLocalPosition( VertexOfCube*3 );
+	mat4 LocalToWorldTransform = GetLocalToWorldTransform();
+	vec3 WorldPosition = GetWorldPosition(LocalToWorldTransform,LocalPosition-0.5);
+	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
+	vec4 ProjectionPos = CameraProjectionTransform * CameraPos;
+	gl_Position = ProjectionPos;
+	FragWorldPosition = WorldPosition.xyz;
+}
+`;
+
+CubeShader.Frag =
+`out vec4 FragColor;
+in vec2 FragCubexy;
+in vec3 FragWorldPosition;
+in vec4 Velocity;
+in float Rand1;
+vec4 Light = vec4(ooo,LIGHTRAD);
+
+#define DEBUG_COLOURS		true
+#define FLOOR_TILE_SIZE		0.4
+#define FLOOR_COLOUR(Odd)	vec3(Odd?0.2:0.1)
+#define PROJECTILE_COLOUR	vec3(0.8,0.06,0.26)
+#define WEAPON_COLOUR		vec3(0,1,1)
+#define HEART_COLOUR		vec3(1,0,0)
+#define Cubexy	FragCubexy
+${NmeMeta}
+
+
+
+void main()
+{
+	//if ( FLOAT_TARGET )
+	{
+		FragColor = vec4(0,1,0,1);
+//		return;
+	}
+	vec4 Vel4 = Velocity;
+	vec3 rgb = vec3(1,0,1);
+
+	ivec3 xz = ivec3(mod(FragWorldPosition/FLOOR_TILE_SIZE,vec3(2)));
+	vec3 SpookyColour = mod( vec3(FragIndex), vec3(1234,100,7777) ) / vec3(1000,100,7777) * vec3(0.1,1,0.3);
+
+	if ( Type_IsStatic )	rgb = vec3(1);
+	if ( Type_IsDebris )	rgb = SpookyColour;//vec3(1,0,0);
+	if ( Type_IsDebrisBlood )
+	{
+		rgb = vec3(1,0,0);
+		Vel4=vec4(0);
+	}
+	if ( Type_IsSprite )	rgb = SpookyColour;
+	//if ( Type_IsSprite )	rgb = vec3(0,1,0);
+	if ( Slot_IsFloor )
+	{
+		rgb = FLOOR_COLOUR(xz.x==xz.z);
+		Vel4*=0.0;
+	}
+	else if ( Type_IsNull )		discard;
+
+	if (Slot_IsProjectile)
+	{
+		rgb = PROJECTILE_COLOUR;
+		Vel4*=0.2;
+	}
+	if (Slot_IsWeapon)
+	{
+		rgb = WEAPON_COLOUR;
+		Vel4*=0.2;
+	}
+	if ( Slot_IsHeart )
+	{
+		rgb = HEART_COLOUR;
+		Vel4*=0.2;
+
+		if ( Dead )discard;
+		if ( HeartCooldown >= HEARTCOOLDOWNFRAMES )
+			discard;//rgb = vec3(0,0,1);
+		else
+			if ( (HeartCooldown%8) >= 4 )
+				discard;
+	}
+
+	rgb *= mix(0.7,1.0,Rand1);
+
+	float Lit = 1.0 - min(1.0,length(FragWorldPosition-Light.xyz)/Light.w);
+	//float Lit=1.0;
+	/*
+	//Lit *= Lit;
+	Lit*=4.0;
+	Lit = Lit < 1.0 ? 0.2 : 1.0;
+*/
+	rgb += vec3(Lit)*0.2;
+	Lit += min(9.9,length(Vel4.xyz)/4.0);
+
+	rgb *= vec3(Lit);
+	FragColor = vec4(rgb,1);
+}
+`;
+
+VelShader.Vert = PosShader.Vert;
+VelShader.Frag =
+`out vec4 Vel4;
+in vec2 uv;
+${NmeMeta}
+
+#define GravityY	16.0
+#define FloorDrag	mix(0.3,0.8,RAND1*Random4.x)
+
+//	gr: make this bigger based on velocity so sliding projectiles dont hit so much
+#define PROJECTILE_MAX_SIZE	(CUBESIZE*5.0)
+#define PROJECTILE_MIN_SIZE	(CUBESIZE*1.0)
+#define PROJECTILE_MIN_VEL	10.0
+#define PROJECTILE_MAX_VEL	40.0
+
+
+float TimeAlongLine3(vec3 Position,vec3 Start,vec3 End)
+{
+	vec3 Direction = End - Start;
+	float DirectionLength = length(Direction);
+	if ( DirectionLength < 0.0001 )
+		return 0.0;
+	float Projection = dot( Position - Start, Direction) / (DirectionLength*DirectionLength);
+	
+	return Projection;
+}
+
+vec3 NearestToLine3(vec3 Position,vec3 Start,vec3 End)
+{
+	float Projection = TimeAlongLine3( Position, Start, End );
+	
+	//	clip to start & end of line
+	Projection = clamp( Projection, 0.0, 1.0 );
+
+	vec3 Near = mix( Start, End, Projection );
+	return Near;
+}
+
+vec3 hash32(vec2 p)
+{
+	vec3 p3 = fract(p.xyx * vec3(.1031, .1030, .0973));
+	p3 += dot(p3, p3.yzx+33.33);
+	return fract((p3.xxy+p3.yzz)*p3.zyx);
+}
+
+#define MOVINGf	(Type_IsDebris?1.0:0.0)
+
+uniform float NmeLiveCount;
+#define Vel Vel4.xyz
+
+void main()
+{
+	Vel4 = dataFetch(OldVelocitys);
+	vec4 Pos4 = dataFetch(NewPositions);
+	vec3 xyz = Pos4.xyz;
+
+	//	new projectile data
+	if ( Slot_IsProjectile && ProjectileVel[Projectilei].w > 0.0 )
+	{
+		Vel = ProjectileVel[Projectilei].xyz;
+		Type = float(DEBRIS);
+	}
+
+	if ( FirstFrame && Slot_IsHeart )
+		Type = float(SPRITEHEART);
+
+	//	unset heartdebris'
+	if ( Type_IsDebrisHeart )
+		Type = float(DEBRISBLOOD);
+
+	float AirDrag = 0.01;
+
+	//	convert from static to nme
+	if ( NmeIndex < int(NmeLiveCount) && Type_IsAsleep )
+		Type = float(SPRITE0+NmeIndex);
+
+
+	//	spring to sprite position
+	if ( Slot_IsChar )
+	{
+		float Speed = 10.0;
+		AirDrag = 0.0;
+		vec3 Delta = CharXyz - xyz;
+		
+		if ( CharNull || Typei!=STATIC )	Delta=vec3(0,0,0);
+		Type = float(CharNull?NULL:STATIC);
+
+		//if ( length(Delta) > 0.0 )
+		//	Delta = normalize(Delta) * min( length(Delta), Speed );
+		Vel = Delta/TIMESTEP*0.2;
+	}
+	else if ( Slot_IsHeart )
+	{
+		AirDrag = 0.12;
+		float Speed = 1.2;
+		vec3 Target = HeartXyz;
+		vec3 Delta = Target - xyz;
+		if ( length(Delta) > 0.0 )
+			Delta = normalize(Delta) * min( length(Delta), Speed );
+		Vel += Delta;
+	}
+	else if ( !Slot_IsProjectile && Type_IsSprite )
+	{
+		Vel *= 0.95;
+		float Speed = 1.1;
+		vec3 Target = NmePos;
+		vec3 Delta = Target - xyz;
+		if ( length(Delta) > 0.0 )
+			Delta = normalize(Delta) * min( length(Delta), Speed );
+		Vel += Delta;
+	}
+
+
+	Vel *= 1.0 - AirDrag;
+	Vel.y += MOVINGf * -GravityY * TIMESTEP;
+
+	//	collisions
+	if ( !Slot_IsProjectile && !Slot_IsHeart && !Type_IsDebris )
+	for ( int p=Dead?0:-1;	p<MAX_PROJECTILES;	p++ )
+	{
+		vec3 ppp_old = FetchProjectile(OldPositions,p).xyz;
+		vec3 ppp_new = FetchProjectile(NewPositions,p).xyz;
+		vec3 ppv = FetchProjectile(OldVelocitys,p).xyz;
+
+		//	need to invalidate, but not working, so sometimes projectiles can cut through randomly (old to new pos)
+		if ( ProjectilePos[p].w == 1.0 )
+			ppp_old = ppp_new = ProjectilePos[p].xyz;
+
+		float Randomness = 0.6;
+		float pplen = min( PROJECTILE_MAX_VEL,length(ppv) );
+		float SizeScale = mix( PROJECTILE_MIN_SIZE, PROJECTILE_MAX_SIZE, Range01(PROJECTILE_MIN_VEL,PROJECTILE_MAX_VEL,pplen) );
+
+		if ( p==-1 )
+		{
+			ppp_old = ppp_new = HeartPos0;
+			ppv = vec3(0,0,-1);
+			pplen = 42.0;
+			Randomness = 0.35;
+			SizeScale = PROJECTILE_MAX_SIZE;
+		}
+
+		vec3 ppp = NearestToLine3( xyz, ppp_old, ppp_new );
+		bool Hit = length(ppp-xyz) < SizeScale;
+		if ( !Hit )
+			continue;
+		
+		vec3 RandDir = (hash32(uv*777.777)-0.5);
+		Vel = normalize( mix(normalize(ppv),normalize(RandDir),Randomness) );
+		Vel *= pplen * 0.4;
+
+		Type = float(p==-1&&HeartCooldown==0?DEBRISHEART:DEBRIS);
+	}
+
+	if ( xyz.y <= float(FLOORY) && !Slot_IsChar && !Slot_IsHeart )
+	{
+		Vel = reflect( Vel*(1.0-FloorDrag), UP );
+		Vel.y = abs(Vel.y);
+
+		//	stop if tiny bounce
+		if ( length(Vel) < GravityY*6.0*TIMESTEP )
+		{
+			Vel = vec3(0);
+			Type = float(STATIC);
+		}
+	}
+
+	Vel = dataWrite(Vel);
+}
+`;
+
+function Subtract3(a,b)
+{
+	return a.map( (v,i) => v-b[i] );
+}
+
+function Inc3(Vec,Delta)
+{
+	[0,1,2].map(i=>Vec[i]+=Delta[i]);
+}
+
+function Normalise3(a,NewLength=1)
+{
+	let Length = Math.hypot( ...a );
+	return a.map( x => x/Length*NewLength );
+}
+
+function Cross3(a0,a1,a2,b0,b1,b2)
+{
+	return [
+		a1 * b2 - a2 * b1,
+		a2 * b0 - a0 * b2,
+		a0 * b1 - a1 * b0
+		];
+}
+
+const DegToRad = Math.PI / 180;
+const RadToDeg = 1/DegToRad;
+const Near = 0.01;
+const Far = 10000;
+const FovV = 40;
+const Up = [0,1,0];
+
+class Camera_t
+{
+	constructor()
+	{
+		this.Position = [ 0,2,20 ];
+		this.LookAt = [ 0,0,0 ];
+	}
+		
+	//GetProjectionMatrix(ViewRect)
+	GetProjectionMatrix(Viewport)
+	{
+		//	gr: match quest projection;
+		//	0.9172857999801636, 0, 0, 0,
+		//	0, 0.8686715364456177, 0, 0,
+		//	0.17407210171222687, -0.035242434591054916, -1.0001999139785767, -1,
+		//	0, 0, -0.2000199854373932, 0
+		
+		let ViewRect = [0,0,Viewport[2]/Viewport[3],1];
+			
+		//	overriding user-provided matrix
+		if ( this.ProjectionMatrix )
+			return this.ProjectionMatrix;
+		
+		const Aspect = ViewRect[2] / ViewRect[3];
+		let fy = 1.0 / Math.tan( DegToRad*FovV / 2);
+		let fx = fy / Aspect;
+		
+		let Depth = (Near+Far) / (Near-Far);
+		let DepthTrans = (2*Far*Near) / (Near-Far);
+		let s=0,cx=0,cy=0;
+		return [
+			fx,s,cx,0,
+			0,fy,cy,0,
+			0,0,Depth,-1,
+			0,0,DepthTrans,0
+		];
+	}
+	
+	get LocalRotation4x4()
+	{
+		if ( this.Rotation4x4 )
+			return this.Rotation4x4;
+		
+		const Matrix = this.GetProjectionMatrix([0,0,1,1]);
+		//	gr [10] AND [11] are always negative?
+		//	we should be able to do the math and work out the z multiplication
+		const ZForwardIsNegative = Matrix[11] < 0;
+		let eye = ZForwardIsNegative ? this.LookAt : this.Position;
+		let center = ZForwardIsNegative ? this.Position : this.LookAt;
+		//	CreateLookAtRotationMatrix(eye,up,center)
+		let z = Normalise3( Subtract3( center, eye ) );
+		let x = Normalise3( Cross3( ...Up, ...z ) );
+		let y = Normalise3( Cross3( ...z,...x ) );
+		return [
+			x[0],	y[0],	z[0],	0,
+			x[1],	y[1],	z[1],	0,
+			x[2],	y[2],	z[2],	0,
+			0,	0,	0,	1,
+		];
+	}
+
+	get WorldToLocal()
+	{
+		//	to move from world space to camera space, we should take away the camera origin
+		//	so this should always be -pos
+		let Trans = this.Position.map( x=>-x );
+		let Translation = new DOMMatrix().translate(...Trans);
+		let WorldToCamera = new DOMMatrix(this.LocalRotation4x4).multiply(Translation);
+		return WorldToCamera;
+	}
+	
+	get LocalToWorld()
+	{
+		return this.WorldToLocal.inverse();
+	}
+	
+	GetWorldTransform(LocalOffset)
+	{
+		return this.LocalToWorld.translate(...LocalOffset);
+	}
+	
+	//	get forward vector in world space
+	GetForward(Normalised=1)
+	{
+		let LookAt = this.LookAt;
+
+		//	external transform, so need to calc the real lookat
+		if ( this.Rotation4x4 )
+		{
+			//let LookAtTrans = this.GetWorldTransform([0,0,-1]);
+			//	gr: why is this backwards...
+			LookAt = this.LocalToWorld.transformPoint(new DOMPoint(0,0,-1));
+		}
+			
+		let z = Subtract3( LookAt, this.Position );
+		return Normalised ? Normalise3( z, Normalised ) : z;
+	}
+		
+	MovePositionAndLookAt(Delta)
+	{
+		Inc3(this.Position,Delta);
+		Inc3(this.LookAt,Delta);
+	}
+	
+	
+	GetLookAtRotation()
+	{
+		//	forward instead of backward
+		let Dir = this.GetForward(false);
+		let Distance = Math.hypot( ...Dir );
+		Dir = Normalise3( Dir );
+		
+		let Yaw = RadToDeg * Math.atan2( Dir[0], Dir[2] );
+		let Pitch = RadToDeg * Math.asin(-Dir[1]);
+		return [Pitch,Yaw,0,Distance];
+	}
+	
+	SetLookAtRotation(p,y,r,d)
+	{
+		p *= DegToRad;
+		let cp = Math.cos(p);
+		y *= DegToRad;
+		let Delta =
+		[
+			Math.sin(y) * cp,
+			-Math.sin(p),
+			Math.cos(y) * cp
+		];
+		this.LookAt = this.Position.map( (p,i)=> p + Delta[i] * d );
+	}
+	
+	OnCameraFirstPersonRotate(x,y,z,FirstClick)
+	{
+		let yrp = [y,x,z];
+		
+		if ( FirstClick || !this.LastyFpsPos )
+		{
+			this.StartPyrd = this.GetLookAtRotation();
+			this.LastyFpsPos = yrp;
+		}
+		
+		let Delta = this.LastyFpsPos.map( (x,i) => (x-yrp[i])*0.1 );
+		Delta[3]=0;
+		let pyrd = this.StartPyrd.map( (x,i) => x + Delta[i] );
+		this.SetLookAtRotation( ...pyrd );
+	}
+}
+
+
+function GetTime(){	return Math.floor(performance.now());	}
+
+let Camera = new Camera_t();
+Camera.Position = [ 0,1.8,8 ];
+Camera.LookAt = [ 0,1.8,0 ];
+
+let CameraButton = 2;
+let InputState ={0:{},1:{},2:{}};
+let WeaponOffset = [0,-0.5,-3.5];
+let ButtonMasks = [ 1<<0, 1<<2, 1<<1 ];
+let MouseLastPos = null;
+
+function OnMouse(Event)
+{
+	if ( Event.button == CameraButton && Event.type=='mousedown' )
+		MouseLastPos = null;
+
+	if ( Event.buttons & ButtonMasks[CameraButton] || document.pointerLockElement )
+	{
+		let Rect = Event.currentTarget.getBoundingClientRect();
+		let ClientX = Event.pageX || Event.clientX;
+		let ClientY = Event.pageY || Event.clientY;
+		let x = ClientX - Rect.left;
+		let y = ClientY - Rect.top;
+		
+		let First = MouseLastPos==null;
+		
+		if ( MouseLastPos && Event.movementX !== undefined )
+			[x,y]=MouseLastPos;
+		x-=Event.movementX||0;
+		y-=Event.movementY||0;
+
+		Camera.OnCameraFirstPersonRotate( -x, y, 0, First );
+		
+		MouseLastPos = [x,y];
+	}
+	
+	//ButtonMasks.forEach( (bm,i) => InputState[i].Down = (Event.buttons&bm) ? GetTime() : false );
+	[1<<0].forEach( (bm,i) => InputState[i].Down = (Event.buttons&bm) ? GetTime() : false );
+}
+
+
+function OnMouseWheel(Event)
+{
+	let Delta = Event.deltaY * -0.06;
+	let Forward3 = Camera.GetForward(Delta);
+	Camera.MovePositionAndLookAt( Forward3 );
+}
+
+function OnLockMouse()
+{
+	if ( !Canvas.requestPointerLock )
+		return;
+	MouseLastPos = null;
+	Canvas.requestPointerLock();
+}
+
+class DesktopXr
+{
+	constructor(Canvas)
+	{
+		this.Camera = Camera;
+		Canvas.addEventListener('mousedown',OnMouse,true);
+		Canvas.addEventListener('mousemove',OnMouse,true);
+		Canvas.addEventListener('mouseup',OnMouse,true);
+		Canvas.addEventListener('wheel',OnMouseWheel,true);
+		Canvas.addEventListener('contextmenu',e=>e.preventDefault(),true);
+		Canvas.addEventListener('click',OnLockMouse);
+	}
+	
+	GetInput()
+	{
+		//	update transform of buttons
+		for ( let Button in InputState )
+		{
+			InputState[Button].Transform = Camera.GetWorldTransform(WeaponOffset);
+		}
+		return InputState;
+	}
+}
+
 
 let NmePixelCount = 0;
 let NmeLiveCount = 0;
@@ -438,7 +1206,7 @@ function OnXrRender(Cameras)
 }
 
 
-export default async function Bootup(Canvas,XrOnWaitForCallback)
+async function Bootup(Canvas,XrOnWaitForCallback)
 {
 	rc = new RenderContext_t(Canvas);
 	Desktop = new DesktopXr(Canvas);
@@ -932,7 +1700,7 @@ class XrDev
 	}
 }
 
-export async function CreateXr(OnWaitForCallback)
+async function CreateXr(OnWaitForCallback)
 {
 	const SessionMode = await GetSupportedSessionMode();
 	if ( SessionMode == false )

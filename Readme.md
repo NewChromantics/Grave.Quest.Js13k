@@ -8,3 +8,5 @@ The goal is to be a vanilla js webxr voxel shooter.
 --------------
 - Not using any gl attributes or buffers and generating cube geometry via shader by abusing `gl_VertexId`
 
+- Shrink to `MicroMicro.js` with 
+	- `npx roadroller Micro.js -o MicroMicro.js`
