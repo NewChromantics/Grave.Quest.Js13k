@@ -53,5 +53,5 @@ jobs:
       - name: Upload Final zip artifact
         uses: actions/upload-artifact@v3
         with:
-          name: $OUTPUT_ZIP
-          path: ./$OUTPUT_ZIP
+          name: ${{ env.OUTPUT_ZIP }}
+          path: ${{ env.OUTPUT_ZIP }}
