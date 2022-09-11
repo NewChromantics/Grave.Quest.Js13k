@@ -1,4 +1,4 @@
-import {NmeMeta} from './Micro_PhysicsPositionShader.js'
+import {NmeMeta} from './PosShader.js'
 export const Vert =
 `out vec2 FragCubexy;
 out vec3 FragWorldPosition;
@@ -42,41 +42,27 @@ vec3 GetWorldPosition(mat4 LocalToWorldTransform,vec3 LocalPosition)
 {
 	//	stretching relies on cube being -1...1
 	//	gr: or does it? cubes stretch better, but always double size
-	LocalPosition = mix( vec3(-HALFCUBESIZE),vec3(HALFCUBESIZE), LocalPosition);
+	LocalPosition = mix(-HCZ3,HCZ3,LocalPosition);
 
 	Velocity = dataFetch(NewVelocitys);
 
-	vec4 WorldPos = LocalToWorldTransform * vec4(LocalPosition,1.0);
-	WorldPos.xyz *= WorldPos.www;
-	//WorldPos.y = max( WorldPos.y, float(FLOORY) );
-	WorldPos.w = 1.0;
+	vec3 WorldPos = (LocalToWorldTransform * vec4(LocalPosition,1.0)).xyz;
 
 	//	stretch world pos along velocity
 	vec3 TailDelta = -Velocity.xyz * VelocityStretch * TIMESTEP;
 	if ( !ENABLE_STRETCH || length(TailDelta)<CUBESIZE)
-		return WorldPos.xyz;
+		return WorldPos;
 
-	vec4 OriginWorldPos = LocalToWorldTransform * vec4(ooo1);
-	OriginWorldPos.xyz *= OriginWorldPos.www;
-	OriginWorldPos.w = 1.0;
+	vec3 OriginWorldPos = (LocalToWorldTransform * vec4(ooo1)).xyz;
+	vec3 LocalPosInWorld = WorldPos - OriginWorldPos;
 	
-
-	
-	vec3 LocalPosInWorld = WorldPos.xyz - OriginWorldPos.xyz;
-	
-	//	this is the opposite of what it should be and shows the future
-	//	but better than flashes of past that wasnt there (better if we just stored prev pos)
-	vec3 NextPos = WorldPos.xyz - (TailDelta*0.9);
-	vec3 PrevPos = WorldPos.xyz + (TailDelta*0.1);
-	
-	//	gr; this nvidia object space motion blur stretches if the [current]normal
-	//		is inline(dot(next-prev,velocity)>0) with the motion vector(velocity)... in EYESPACE
-	//	https://www.nvidia.com/docs/io/8230/gdc2003_openglshadertricks.pdf
+	vec3 NextPos = WorldPos - (TailDelta*0.9);
+	vec3 PrevPos = WorldPos + (TailDelta*0.1);
 	float Scale = dot( normalize(LocalPosInWorld), normalize(-TailDelta) );
-	float Lerp = Scale > 0.0 ? 1.0 : 0.0;
-	
-	WorldPos.xyz = mix( PrevPos, NextPos, Lerp );
-	return WorldPos.xyz;
+	float Lerp = Scale>0.0?1.0:0.0;
+
+	WorldPos = mix( PrevPos, NextPos, Lerp );
+	return WorldPos;
 }
 
 

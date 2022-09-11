@@ -1,15 +1,13 @@
-export {Vert,NmeMeta} from './Micro_PhysicsPositionShader.js'
-import {NmeMeta} from './Micro_PhysicsPositionShader.js'
+export {Vert,NmeMeta} from './PosShader.js'
+import {NmeMeta} from './PosShader.js'
 
 export const Frag =
-`out vec4 Colour;
+`out vec4 Vel4;
 in vec2 uv;
+${NmeMeta}
 
-const float FloorDragMin = 0.3;	//	less = more bounce
-const float FloorDragMax = 0.8;	//	less = more bounce
-const float GravityY = 16.0;
-#define FloorDrag	mix(FloorDragMin,FloorDragMax,RAND1*Random4.x)
-
+#define GravityY	16.0
+#define FloorDrag	mix(0.3,0.8,RAND1*Random4.x)
 
 //	gr: make this bigger based on velocity so sliding projectiles dont hit so much
 #define PROJECTILE_MAX_SIZE	(CUBESIZE*5.0)
@@ -17,10 +15,6 @@ const float GravityY = 16.0;
 #define PROJECTILE_MIN_VEL	10.0
 #define PROJECTILE_MAX_VEL	40.0
 
-float Range01(float Min,float Max,float Value)
-{
-	return clamp((Value-Min)/(Max-Min),0.0,1.1);
-}
 
 float TimeAlongLine3(vec3 Position,vec3 Start,vec3 End)
 {
@@ -44,21 +38,6 @@ vec3 NearestToLine3(vec3 Position,vec3 Start,vec3 End)
 	return Near;
 }
 
-
-//	from https://www.shadertoy.com/view/4djSRW
-//  1 out, 2 in...
-float hash12(vec2 p)
-{
-	vec3 p3  = fract(vec3(p.xyx) * .1031);
-	p3 += dot(p3, p3.yzx + 33.33);
-	return fract((p3.x + p3.y) * p3.z);
-}
-vec3 hash31(float p)
-{
-	vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
-	p3 += dot(p3, p3.yzx+33.33);
-	return fract((p3.xxy+p3.yzz)*p3.zyx);
-}
 vec3 hash32(vec2 p)
 {
 	vec3 p3 = fract(p.xyx * vec3(.1031, .1030, .0973));
@@ -67,17 +46,14 @@ vec3 hash32(vec2 p)
 }
 
 #define MOVINGf	(Type_IsDebris?1.0:0.0)
-//#define MOVINGf	(Type_IsStatic?0.0:1.0)
-
-${NmeMeta}
 
 uniform float NmeLiveCount;
+#define Vel Vel4.xyz
 
 void main()
 {
-	vec4 Vel4 = dataFetch(OldVelocitys);
+	Vel4 = dataFetch(OldVelocitys);
 	vec4 Pos4 = dataFetch(NewPositions);
-	vec3 Vel = Vel4.xyz;
 	vec3 xyz = Pos4.xyz;
 
 	//	new projectile data
@@ -97,7 +73,7 @@ void main()
 	float AirDrag = 0.01;
 
 	//	convert from static to nme
-	if ( NmeIndex < int(NmeLiveCount) && Type < 0.0 )
+	if ( NmeIndex < int(NmeLiveCount) && Type_IsAsleep )
 		Type = float(SPRITE0+NmeIndex);
 
 
@@ -190,6 +166,6 @@ void main()
 		}
 	}
 
-	Colour = vec4(Vel,Type);
+	Vel = dataWrite(Vel);
 }
 `;

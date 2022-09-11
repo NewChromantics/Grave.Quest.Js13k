@@ -1,6 +1,6 @@
-import * as CubeShader from './Micro_CubeShader.js'
-import * as PhysicsPositionShader from './Micro_PhysicsPositionShader.js'
-import * as PhysicsVelocityShader from './Micro_PhysicsVelocityShader.js'
+import * as CubeShader from './CubeShader.js'
+import * as PosShader from './PosShader.js'
+import * as VelShader from './VelShader.js'
 
 import DesktopXr from './DesktopXr.js'
 
@@ -159,7 +159,6 @@ const Macros =
 	FLOORY:0.0,
 	NEARFLOORY:0.05,
 	CUBESIZE:0.06,
-	HALFCUBESIZE:0.03,
 	STATIC:0,
 	NULL:1,
 	DEBRIS:2,
@@ -217,6 +216,11 @@ let ClearColour=[0.03,0.13,0.03];
 let Desktop;
 let FireRepeatMs = 40;
 
+let ForcedString;
+let WORLDW = WORLDSIZE*0.7;
+let WorldMin = [-WORLDW,FLOORY,-WORLDSIZE*3,0];
+let WorldMax = [WORLDW,FLOORY,WORLDSIZE*0.4,1];
+let MapPositions = InitArray(DATAHEIGHT,RandomWorldPos);
 
 
 
@@ -248,18 +252,19 @@ class RenderContext_t
 {
 	constructor(Canvas)
 	{
-		const Options = {};
-		Options.antialias = true;
-		Options.xrCompatible = true;
-		Options.premultipliedAlpha = false;
-		Options.alpha = true;
+		let Options={
+		antialias:true,
+		xrCompatible:true,
+		premultipliedAlpha:false,
+		alpha:true
+		}
 		gl = Canvas.getContext('webgl2', Options );
 		FloatTarget = gl.getExtension('EXT_color_buffer_float');
-		Macros.FLOAT_TARGET=FloatTarget?true:false;
+		Macros.FLOAT_TARGET=!!FloatTarget;
 		
 		this.CubeShader = this.CreateShader(CubeShader);
-		this.PhysicsPositionShader = this.CreateShader(PhysicsPositionShader);
-		this.PhysicsVelocityShader = this.CreateShader(PhysicsVelocityShader);
+		this.PosShader = this.CreateShader(PosShader);
+		this.VelShader = this.CreateShader(VelShader);
 
 		TextureTarget = gl.createFramebuffer();
 	}
@@ -316,10 +321,6 @@ function InitVelocityPixel(_,i)
 	return [0,0,0,Type];
 }
 
-let WORLDW = WORLDSIZE*0.7;
-let WorldMin = [-WORLDW,FLOORY,-WORLDSIZE*3,0];
-let WorldMax = [WORLDW,FLOORY,WORLDSIZE*0.4,1];
-let MapPositions = InitArray(DATAHEIGHT,RandomWorldPos);
 
 
 function RandomWorldPos()
@@ -337,7 +338,6 @@ function InitPositionPixel(_,i)
 }
 
 
-let ForcedString;
 
 class State_Click
 {
@@ -397,6 +397,10 @@ class State_End extends State_Click
 
 let State;
 
+function OnInput(Input)
+{
+	Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
+}
 
 export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
@@ -425,9 +429,9 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		}
 		else
 		{
-			Blit(VelocityTextures,rc.PhysicsVelocityShader,CameraToWorld,ReadGpuState);
+			Blit(VelocityTextures,rc.VelShader,CameraToWorld,ReadGpuState);
 		}
-		Blit(PositionTextures,rc.PhysicsPositionShader,CameraToWorld);
+		Blit(PositionTextures,rc.PosShader,CameraToWorld);
 	}
 	
 	function OnPostRender()
@@ -448,10 +452,7 @@ export default async function Bootup(Canvas,XrOnWaitForCallback)
 		else
 			Render(Camera);
 	}
-	function OnInput(Input)
-	{
-		Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
-	}
+	
 	
 	async function XrThread()
 	{
@@ -528,8 +529,7 @@ function UpdateWeapon(Name,State)
 function Update()
 {
 	let Input = Desktop.GetInput();
-	Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
-	
+	OnInput(Input);
 	HeartHitCooldown=Math.max(0,HeartHitCooldown-1);
 }
 

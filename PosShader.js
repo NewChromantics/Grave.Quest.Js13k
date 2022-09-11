@@ -1,14 +1,16 @@
 export const NmeMeta =
 `
-#define Range(mn,mx,v)	((v-mn)/(mx-mn))
+#define Range(mn,mx,v)		((v-mn)/(mx-mn))
+#define Range01(mn,mx,v)	clamp(Range(mn,mx,v),0.0,1.1)
 #define Lerp(mn,mx,v)	( mn + ((mx-mn)*v) )
 #define ENTROPY_MIN4	vec4(ENTROPY_MIN,ENTROPY_MIN,ENTROPY_MIN,0)
 #define ENTROPY_MAX4	vec4(ENTROPY_MAX,ENTROPY_MAX,ENTROPY_MAX,1)
 #define dataFetch(t)	Lerp( ENTROPY_MIN4, ENTROPY_MAX4, texelFetch(t,ivec2(Cubexy),0) )
 #define dataWrite(v)	Range( ENTROPY_MIN4.xyz,ENTROPY_MAX4.xyz,v)
 
-#define SpriteMats(t,s0)	mat4(s0.xyyy,s0.yxyy,s0.yyxy,t,1)
-#define SpriteMat(t)		SpriteMats(t,vec2(CUBESIZE*1.0,0))
+#define SpriteMat(t)		mat4(CUBESIZE,oooo,CUBESIZE,oooo,CUBESIZE,0,t,1)
+
+#define HCZ3	vec3(CUBESIZE*0.5)
 
 uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
@@ -64,6 +66,7 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 #define Type_IsDebrisHeart	(Typei==DEBRISHEART)
 #define Type_IsDebrisBlood	(Typei==DEBRISBLOOD)
 #define Type_IsSprite	(Typei>=SPRITE0)
+#define Type_IsAsleep	(Typei<0)
 //#define SpriteIndex		((abs(Typei)-SPRITE0)%SPRITECOUNT)
 #define SpriteIndex		(Typei>0?0 : abs(Typei)-SPRITE0 )
 
