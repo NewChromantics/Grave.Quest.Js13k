@@ -402,63 +402,57 @@ function OnInput(Input)
 	Object.entries(Input).forEach( e=>{UpdateWeapon(...e);State.UpdateInput(...e);} );
 }
 
+
+function OnPreRender(CameraToWorld)
+{
+	Update();
+
+	//	first frame needs to bake positions before velocity pass
+	if ( State.Time == 0 )
+	{
+		//	reset positions of stuff
+		AllocTextures(PositionTextures,InitPositionPixel);
+		AllocTextures(VelocityTextures,InitVelocityPixel);
+	}
+	else
+	{
+		Blit(VelocityTextures,rc.VelShader,CameraToWorld,ReadGpuState);
+	}
+	Blit(PositionTextures,rc.PosShader,CameraToWorld);
+}
+
+function OnPostRender()
+{
+	PostFrame();
+	if ( State.Time == 0 )
+		State.Time++;
+}
+
+
+function OnXrRender(Cameras)
+{
+	OnPreRender(Cameras[0].LocalToWorld);
+	Render(Cameras[0]);
+	Render(Cameras[1]);
+	OnPostRender();
+}
+
+
 export default async function Bootup(Canvas,XrOnWaitForCallback)
 {
 	rc = new RenderContext_t(Canvas);
 	Desktop = new DesktopXr(Canvas);
 	
 	//	load sprites into pixels
-	let PixelRows = PadArray(Sprites,DATAHEIGHT,`b1`).map(RleToRgba).map(PadPixels);
-	PixelRows = new Float32Array( PixelRows.flat(2) );
-	
-	//AllocTextures(PositionTextures,InitPositionPixel);
-	//AllocTextures(VelocityTextures,InitVelocityPixel);
-	AllocTextures(SpriteTextures,PixelRows);
-
-	
-	function OnPreRender(CameraToWorld)
-	{
-		Update();
-
-		//	first frame needs to bake positions before velocity pass
-		if ( State.Time == 0 )
-		{
-			//	reset positions of stuff
-			AllocTextures(PositionTextures,InitPositionPixel);
-			AllocTextures(VelocityTextures,InitVelocityPixel);
-		}
-		else
-		{
-			Blit(VelocityTextures,rc.VelShader,CameraToWorld,ReadGpuState);
-		}
-		Blit(PositionTextures,rc.PosShader,CameraToWorld);
-	}
-	
-	function OnPostRender()
-	{
-		//ReadGpuState();
-		PostFrame();
-		if ( State.Time == 0 )
-			State.Time++;
-	}
-	
-	
-	function OnRender(Camera,CameraToWorld)
-	{
-		if ( !Camera )
-			OnPreRender(CameraToWorld);
-		else if ( Camera === true )
-			OnPostRender();
-		else
-			Render(Camera);
-	}
+	let PixelRows = PadArray(Sprites,DATAHEIGHT,`b1`).map(RleToRgba).map(PadPixels).flat(2);
+	AllocTextures(SpriteTextures,new Float32Array(PixelRows));
 	
 	
 	async function XrThread()
 	{
 		while(XrOnWaitForCallback)
 		{
-			let XrDevice = await CreateXr(OnRender,OnInput,XrOnWaitForCallback);
+			let XrDevice = await CreateXr(XrOnWaitForCallback);
 			await XrDevice.WaitForEnd;
 		}
 	}
@@ -822,11 +816,9 @@ function GetXrAlpha(BlendMode)
 
 class XrDev
 {
-	constructor(ReferenceSpace,OnRender,OnInput)
+	constructor(ReferenceSpace)
 	{
 		this.ReferenceSpace = ReferenceSpace;
-		this.OnRender = OnRender;
-		this.OnInput = OnInput;
 		this.WaitForEnd = CreatePromise();
 		this.Inputs={};
 		XrSession.addEventListener('end',this.WaitForEnd.Resolve);
@@ -862,31 +854,22 @@ class XrDev
 		if ( !Pose )
 			return;
 		this.FrameUpdate_Input(Frame,Pose);
-		this.OnRender(false,new DOMMatrix(Pose.transform.matrix));	//	prerender
-		//	render
-		//const DeviceFrameBuffer = gl.getParameter(gl.FRAMEBUFFER_BINDING);
-		let DeviceFrameBuffer = this.Layer.framebuffer;
-		for ( let View of Pose.views )
-			this.OnFrameClassic( Frame, Pose, View, DeviceFrameBuffer );
 		
-		this.OnRender(true);	//	post render
+		Pose.views.map(View=>this.GetViewCamera(Frame,Pose,View,this.Layer.framebuffer));
+		OnXrRender(Cameras);
 	}
 	
-	OnFrameClassic(Frame,Pose,View,FrameBuffer)
+	GetViewCamera(Frame,Pose,View,FrameBuffer)
 	{
 		let Viewport = this.Layer.getViewport(View);
-		
 		let Camera = {};
 		Camera.Alpha = GetXrAlpha(Frame.session.environmentBlendMode);
 		Camera.FrameBuffer = FrameBuffer;
 		Camera.Viewport = [Viewport.x,Viewport.y,Viewport.width,Viewport.height];
 		Camera.LocalToWorld = new DOMMatrix(Pose.transform.matrix);
 		Camera.WorldToLocal = new DOMMatrix(Pose.transform.inverse.matrix);
-		Camera.GetProjectionMatrix = function(Viewport)
-		{
-			return View.projectionMatrix;
-		}
-		this.OnRender(Camera);
+		Camera.GetProjectionMatrix=()=>View.projectionMatrix;
+		return Camera;
 	}
 	
 	FrameUpdate_Input(Frame,Pose)
@@ -945,11 +928,11 @@ class XrDev
 		
 		let Inputs = Array.from(Frame.session.inputSources);
 		Inputs.forEach(IterateInput.bind(this));
-		this.OnInput(this.Inputs);
+		OnInput(this.Inputs);
 	}
 }
 
-export async function CreateXr(OnRender,OnInput,OnWaitForCallback)
+export async function CreateXr(OnWaitForCallback)
 {
 	const SessionMode = await GetSupportedSessionMode();
 	if ( SessionMode == false )
@@ -993,7 +976,7 @@ export async function CreateXr(OnRender,OnInput,OnWaitForCallback)
 	let ReferenceSpace = await GetReferenceSpace();
 	console.log(`Got XR ReferenceSpace`,ReferenceSpace);
 	
-	let Device = new XrDev( ReferenceSpace, OnRender, OnInput );
+	let Device = new XrDev(ReferenceSpace);
 	await Device.InitLayer();
 	return Device;
 }

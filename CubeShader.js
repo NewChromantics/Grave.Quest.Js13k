@@ -19,7 +19,7 @@ vec3 GetLocalPosition(int v)
 #define FloorCubeSize (FLOORSIZE/CUBESIZE)
 #define FloorTransform	mat4(FloorCubeSize,0,ooo1,oooo,FloorCubeSize,0,0,float(FLOORY)-CUBESIZE,0,1)
 
-mat4 GetLocalToWorldTransform(vec3 LocalPosition)
+mat4 GetLocalToWorldTransform()
 {
 	if ( Slot_IsFloor )	return FloorTransform;
 	if ( Slot_IsWeapon )	return WeaponPoses[Weaponi];
@@ -38,11 +38,10 @@ float VelocityStretch = 3.0;
 #define ENABLE_STRETCH	(FLOAT_TARGET && !Slot_IsFloor)
 //#define ENABLE_STRETCH	false
 
+
 vec3 GetWorldPosition(mat4 LocalToWorldTransform,vec3 LocalPosition)
 {
-	//	stretching relies on cube being -1...1
-	//	gr: or does it? cubes stretch better, but always double size
-	LocalPosition = mix(-HCZ3,HCZ3,LocalPosition);
+	LocalPosition *= CUBESIZE;
 
 	Velocity = dataFetch(NewVelocitys);
 
@@ -59,9 +58,8 @@ vec3 GetWorldPosition(mat4 LocalToWorldTransform,vec3 LocalPosition)
 	vec3 NextPos = WorldPos - (TailDelta*0.9);
 	vec3 PrevPos = WorldPos + (TailDelta*0.1);
 	float Scale = dot( normalize(LocalPosInWorld), normalize(-TailDelta) );
-	float Lerp = Scale>0.0?1.0:0.0;
-
-	WorldPos = mix( PrevPos, NextPos, Lerp );
+	Scale=Scale>0.0?1.0:0.0;
+	WorldPos = mix(PrevPos,NextPos,Scale);
 	return WorldPos;
 }
 
@@ -72,8 +70,8 @@ void main()
 	FragCubexy = vec2( CubeIndex%DATAWIDTH, (CubeIndex/DATAWIDTH) );
 	int VertexOfCube = gl_VertexID % (3*2*6);
 	vec3 LocalPosition = GetLocalPosition( VertexOfCube*3 );
-	mat4 LocalToWorldTransform = GetLocalToWorldTransform(LocalPosition);
-	vec3 WorldPosition = GetWorldPosition(LocalToWorldTransform, LocalPosition );
+	mat4 LocalToWorldTransform = GetLocalToWorldTransform();
+	vec3 WorldPosition = GetWorldPosition(LocalToWorldTransform,LocalPosition-0.5);
 	vec4 CameraPos = WorldToCameraTransform * vec4(WorldPosition,1);	//	world to camera space
 	vec4 ProjectionPos = CameraProjectionTransform * CameraPos;
 	gl_Position = ProjectionPos;

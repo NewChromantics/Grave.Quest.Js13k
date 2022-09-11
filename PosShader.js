@@ -10,8 +10,6 @@ export const NmeMeta =
 
 #define SpriteMat(t)		mat4(CUBESIZE,oooo,CUBESIZE,oooo,CUBESIZE,0,t,1)
 
-#define HCZ3	vec3(CUBESIZE*0.5)
-
 uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 
 #define SPRITEDIM	vec3(SPRITEW,0,0)
