@@ -1,6 +1,7 @@
 JS13k 2022 entry
 =============
 - This repository has a workflow that minifies and zips the output (see below)
+
 [![Generate Js13k submission zip](https://github.com/NewChromantics/8x8.Js13k/actions/workflows/GenerateJs13kSubmissionZip.yml/badge.svg)](https://github.com/NewChromantics/8x8.Js13k/actions/workflows/GenerateJs13kSubmissionZip.yml)
 
 
