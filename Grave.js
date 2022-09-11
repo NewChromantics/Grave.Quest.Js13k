@@ -488,7 +488,7 @@ void main()
 		Vel = normalize( mix(normalize(ppv),normalize(RandDir),Randomness) );
 		Vel *= pplen * 0.4;
 
-		Type = float(p==-1&&HeartCooldown==0?DEBRISHEART:DEBRIS);
+		Type = float(Type_IsSprite&&p==-1&&HeartCooldown==0?DEBRISHEART:DEBRIS);
 	}
 
 	if ( xyz.y <= float(FLOORY) && !Slot_IsChar && !Slot_IsHeart )
