@@ -34,7 +34,7 @@ mat4 GetLocalToWorldTransform(vec3 LocalPosition)
 	return Transform;
 }
 
-float VelocityStretch = 4.0;
+float VelocityStretch = 3.0;
 #define ENABLE_STRETCH	(FLOAT_TARGET && !Slot_IsFloor)
 //#define ENABLE_STRETCH	false
 
