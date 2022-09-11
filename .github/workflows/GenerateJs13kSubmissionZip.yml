@@ -30,11 +30,13 @@ jobs:
         run: npx roadroller $MINIFIED_JS --optimize 2 -o $SHRUNK_JS
         
       - name: Zip
-        run: zip -9 $OUTPUT_ZIP $ZIP_INPUTS
+        run: |
+          zip -9 ./$OUTPUT_ZIP $ZIP_INPUTS
+          ls -l ./$OUTPUT_ZIP
 
       - name: Get final zip size
         run: |
-          FILE_SIZE=`stat -f "%z" $OUTPUT_ZIP`
+          FILE_SIZE=`stat -f "%z" ./$OUTPUT_ZIP`
           echo "Final zip size $FILE_SIZE"
           echo "ZIP_SIZE=$FILE_SIZE" >> $GITHUB_ENV
           
@@ -46,4 +48,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: $OUTPUT_ZIP
-          path: $OUTPUT_ZIP
+          path: ./$OUTPUT_ZIP
