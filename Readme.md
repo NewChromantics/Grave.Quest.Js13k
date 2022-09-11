@@ -26,11 +26,11 @@ Copy&Pasta Shrink
 -------------------
 	
 - Everything
-	`npx terser --compress --output Mini.js  -- Grave.js && npx roadroller Mini.js --optimize 2 -o Micro.js && rm Grave.zip && zip -9  Grave.zip  ./Micro.js ./Micro.html && ls -l Grave.zip`
+	`npx terser --compress --output Mini.js  -- Grave.js && npx roadroller Mini.js --optimize 2 -o Micro.js && rm -f Grave.zip && zip -9  Grave.zip  ./Micro.js ./Micro.html && ls -l Grave.zip`
 
 - Mini & zip
 	`npx terser --compress --output Micro.js  -- Grave.js && rm -f ./Grave.zip && zip -9  Grave.zip  ./Micro.js ./Micro.html && ls -l Grave.zip`
 	
 - RoadRoller & zip
-	`npx roadroller Grave.js --optimize 2 -o Micro.js && rm Grave.zip && zip -9  Grave.zip  ./Micro.js ./Micro.html && ls -l Grave.zip`
+	`npx roadroller Grave.js --optimize 2 -o Micro.js && rm -f Grave.zip && zip -9  Grave.zip  ./Micro.js ./Micro.html && ls -l Grave.zip`
 
