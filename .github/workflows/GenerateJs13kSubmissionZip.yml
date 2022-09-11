@@ -1,0 +1,49 @@
+name: Generate Js13k submission zip
+
+on:
+  push:
+
+  workflow_dispatch:
+
+env:
+  INPUT_JS: Grave.js
+  MINIFIED_JS: Mini.js
+  SHRUNK_JS: Micro.js
+  ZIP_INPUTS: Micro.js micro.html
+  OUTPUT_ZIP: Grave.zip
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+      - uses: actions/checkout@v3
+      
+      - name: Install node/npx
+      - uses: actions/setup-node@v3
+
+      - name: Minify with terser
+        run: npx terser --compress --output $MINIFIED_JS -- $INPUT_JS
+
+      - name: Shrink with roadroller
+        run: npx roadroller $MINIFIED_JS --optimize 2 -o $SHRUNK_JS
+        
+      - name: Zip
+        run: zip -9 $OUTPUT_ZIP $ZIP_INPUTS
+
+      - name: Get final zip size
+        run: |
+          FILE_SIZE=`stat -f "%z" $OUTPUT_ZIP`
+          echo "Final zip size $FILE_SIZE"
+          echo "ZIP_SIZE=$FILE_SIZE" >> $GITHUB_ENV
+          
+      - name: Check final zip size
+        if: ${{ ZIP_SIZE }} > 13312
+        run: exit 1
+      
+      - name: Upload Final zip artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: $OUTPUT_ZIP
+          path: $OUTPUT_ZIP
