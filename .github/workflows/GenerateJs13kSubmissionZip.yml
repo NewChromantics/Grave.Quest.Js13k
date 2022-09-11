@@ -9,8 +9,11 @@ env:
   INPUT_JS: Grave.js
   MINIFIED_JS: Mini.js
   SHRUNK_JS: Micro.js
-  ZIP_INPUTS: Micro.js micro.html
+  INPUT_HTML: micro.html
+  OUTPUT_HTML: index.html
+  ADDITIONAL_OUTPUT_FILES:
   OUTPUT_ZIP: Grave.zip
+  
 
 jobs:
   build:
@@ -29,9 +32,14 @@ jobs:
       - name: Shrink with roadroller
         run: npx roadroller $MINIFIED_JS --optimize 2 -o $SHRUNK_JS
         
+      # JS13k rules need landing html to be index.html
+      - name: Rename html to index.html
+        run: mv $INPUT_HTML $OUTPUT_HTML
+
+        
       - name: Zip
         run: |
-          zip -9 ./$OUTPUT_ZIP $ZIP_INPUTS
+          zip -9 ./$OUTPUT_ZIP $SHRUNK_JS $OUTPUT_HTML $ADDITIONAL_OUTPUT_FILES
           ls -l ./$OUTPUT_ZIP
 
       # mac: stat -f %z
