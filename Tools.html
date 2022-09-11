@@ -359,7 +359,7 @@ bb__b
 `;
 
 const CharY =`Y
-bb___b
+bb__b
 _bb_b
 __bb_
 _bb__
@@ -392,19 +392,35 @@ bb___b
 `;
 
 const CharO =`O
-_bbbb_
-bb__bb
-bb__bb
-bb__bb
-_bbbb_
+_bbb_
+bb__b
+bb__b
+bb__b
+_bbb_
 `;
 
 const CharV =`V
-bb___b
-bb___b
-_bb_b_
-_bb_b_
-__bb__
+bb__b
+bb__b
+_bb_b
+_bb_b
+__bb_
+`;
+
+const CharB =`B
+_bbb_
+bb__b
+bbbb_
+bb__b
+bbbb_
+`;
+
+const CharU =`U
+bb__b
+bb__b
+bb__b
+bb__b
+_bbb_
 `;
 
 
@@ -498,8 +514,8 @@ function EncodeSpritesToCode(Sprites)
 	let Code = `const Sprites = [\n${SpriteCode}\n];`;
 	
 	//	extra map for individual chars
-	const SpriteMapCode = SpriteDatas.map(DataToMapCode).filter(x=>x!=null).join(',\n');
-	let MapCode = `const SpriteMap = {\n${SpriteMapCode}\n};`;
+	const SpriteMapCode = SpriteDatas.map(DataToMapCode).filter(x=>x!=null).join(',');
+	let MapCode = `const SpriteMap={${SpriteMapCode}};`;
 	console.log(`${Code}\n${MapCode}`);
 	
 }
@@ -593,7 +609,7 @@ EncodeSpritesToCode(
 					Ghost,Cross,Grave,Grass,Fence,
 					Num0,Num1,Num2,Num3,Num4,Num5,Num6,Num7,Num8,Num9,
 					Space,Exclamation,Heart,Dot,DeadEnemy,
-					CharS,CharT,CharA,CharR,CharP,CharE,CharN,CharY,CharK,CharG,CharM,CharO,CharV
+					CharS,CharT,CharA,CharR,CharP,CharE,CharN,CharY,CharK,CharG,CharM,CharO,CharV,CharB,CharU
 					);
 EncodeWavesToCode(Wave0,Wave1);
 

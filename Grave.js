@@ -46,12 +46,12 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 #define ProjectileRow		(ActorCount+0)				//100
 #define HeartRow			(ActorCount+1)				//101
 #define CharRow				(Sloti-(ActorCount+2))		//102 103
-#define WeaponRow			(ActorCount+5)			//	104
+#define WeaponRow			(ActorCount+6)			//	104
 #define Sloti				int(Cubexy.y)
 #define Slot_IsActor		(Sloti<ActorCount)
 #define Slot_IsProjectile	(Sloti==ProjectileRow)
 #define Slot_IsHeart		(Sloti==HeartRow)
-#define Slot_IsChar			(CharRow>=0&&CharRow<=1)
+#define Slot_IsChar			(CharRow>=0&&CharRow<=2)
 #define Slot_IsFloor		(FragIndex==DATALAST)
 #define Projectilei			int(Cubexy.x)
 #define FetchProjectile(t,p)	texelFetch(t,ivec2(p,ProjectileRow),0)
@@ -74,7 +74,6 @@ uniform vec4 WavePositions[WAVEPOSITIONCOUNT];
 #define PPerChar		20
 #define CharBuffer		(STRINGCOUNT*16)
 #define Chari			(int(Cubexy.x)+(CharRow*DATAWIDTH))
-//#define CharI			(FragIndex-(DATALAST-PPerChar*CharBuffer))
 #define CharP			(Chari%PPerChar)
 #define CharN			int(Chari/PPerChar)
 
@@ -771,7 +770,7 @@ class DesktopXr
 	}
 }
 
-
+let MIN_GUI_SECS=3;
 let NmePixelCount = 0;
 let NmeLiveCount = 0;
 let NmeCount = 0;
@@ -804,6 +803,8 @@ let VelocityTextures=[];
 let SpriteTextures=[];	//	only using one but reusing code
 let TextureTarget;
 
+
+
 const Sprites = [
 	"a13b1a1b1a1b1a1b1a1b1a2b1a1b1a1b1a1b1a1b1a1b10a1b10a1b4a1b1a1b16a3b2a3b3a3b2a3b3a2b3a2b2a1b9a3b7a2", //	Ghost
 	"a15b3a8b3a8b3a8b3a8b3a8b3a4b22a4b3a8b3a4", //	Cross
@@ -832,34 +833,16 @@ const Sprites = [
 	"a11b2a9b4a7b2a2b1a6b2a2b1a6b4a7", //	P
 	"a11b5a6b2a9b4a7b2a10b4a6", //	E
 	"a11b2a2b1a6b2a1b2a6b3a1b1a6b2a2b1a6b2a2b1a6", //	N
-	"a11b2a10b2a10b2a8b2a1b1a6b2a3b1a5", //	Y
+	"a11b2a10b2a10b2a8b2a1b1a6b2a2b1a6", //	Y
 	"a11b2a2b1a6b2a1b1a7b3a8b2a1b1a7b2a2b1a6", //	K
 	"a12b4a6b2a2b1a6b2a1b2a6b2a10b4a6", //	G
 	"a11b2a3b1a5b2a1b1a1b1a5b2a1b1a1b1a5b2a1b1a1b1a5b5a6", //	M
-	"a12b4a6b2a2b2a5b2a2b2a5b2a2b2a6b4a6", //	O
-	"a13b2a8b2a1b1a7b2a1b1a6b2a3b1a5b2a3b1a5", //	V
+	"a12b3a7b2a2b1a6b2a2b1a6b2a2b1a7b3a7", //	O
+	"a13b2a8b2a1b1a7b2a1b1a6b2a2b1a6b2a2b1a6", //	V
+	"a11b4a7b2a2b1a6b4a7b2a2b1a7b3a7", //	B
+	"a12b3a7b2a2b1a6b2a2b1a6b2a2b1a6b2a2b1a6", //	U
 ];
-const SpriteMap = {
-	" ":15,
-	"!":16,
-	"@":17,
-	".":18,
-	"~":19,
-	"S":20,
-	"T":21,
-	"A":22,
-	"R":23,
-	"P":24,
-	"E":25,
-	"N":26,
-	"Y":27,
-	"K":28,
-	"G":29,
-	"M":30,
-	"O":31,
-	"V":32
-};
-
+const SpriteMap={	" ":15,	"!":16,	"@":17,	".":18,	"~":19,	"S":20,	"T":21,	"A":22,	"R":23,	"P":24,	"E":25,	"N":26,	"Y":27,	"K":28,	"G":29,	"M":30,	"O":31,	"V":32,	"B":33,	"U":34};
 function CharToSprite(c)
 {
 	return SpriteMap[c]||(parseInt(c,36)+SPRITEZERO);
@@ -1116,7 +1099,7 @@ class State_Click
 	}
 	async Update()
 	{
-		return this.Started?new this.NextState:this;
+		return this.Time>MIN_GUI_SECS&&this.Started?new this.NextState:this;
 	}
 	UpdateInput(Name,State)
 	{
@@ -1131,7 +1114,7 @@ class State_Start extends State_Click
 	{
 		super(State_Game);
 		this.Time=0;
-		ForcedString = 'PRESS ANY KEY';
+		ForcedString = 'PRESS ANY  BUTTON!';
 		ResetGame();
 	}
 }
@@ -1159,7 +1142,7 @@ class State_End extends State_Click
 	{
 		super(State_Start);
 		this.Time=1;	//	dont have first frame
-		ForcedString = 'GAME OVER';
+		ForcedString = '  GAME      OVER!';
 	}
 }
 
@@ -1395,7 +1378,7 @@ function UpdateUniforms()
 	let Str = `@@@@@     `.substr(5-Lives).substr(0,5);
 	Str += ` ~${Killed}`;
 	if ( HeartHitCooldown>0 )
-		Str =`~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~`;
+		Str =`~ ~ ~ ~ ~  ~ ~ ~ ~ `;
 	SetUniformStr('String',ForcedString||Str);
 	
 	SetUniformVector('Random4',oooo.map(plerp));
