@@ -43,11 +43,11 @@ jobs:
           echo "ZIP_SIZE=$FILE_SIZE" >> $GITHUB_ENV
 
       - name: Fail if final zip size invalid
-        if: ${{ env.ZIP_SIZE+0 == 0 }}
+        if: ${{ env.ZIP_SIZE == 0 }}
         run: exit 1
 
       - name: Fail if final zip size too big
-        if: ${{ env.ZIP_SIZE+0 > 13312 }}
+        if: ${{ env.ZIP_SIZE > 13312 }}
         run: exit 1
       
       - name: Upload Final zip artifact
